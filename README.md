@@ -1,4 +1,3 @@
-```markdown
 # BEND
 **Backend Enhanced Neural Dispatch**
 
