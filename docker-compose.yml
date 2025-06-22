@@ -1,0 +1,117 @@
+version: "3.9"
+
+services:
+  koboldcpp:
+    image: ghcr.io/henk717/koboldcpp:latest
+    container_name: koboldcpp
+    restart: unless-stopped
+    ports:
+      - "12009:5001"
+    volumes:
+      - ./models:/models
+    command: >
+      --model /models/${MODEL_NAME}
+      --threads 16
+      --port 5001
+      --gpu-split auto
+      --contextsize ${MODEL_CONTEXT_SIZE}
+      --compress-loader
+      --mlock
+    # Enable this section if you have an NVIDIA GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: openwebui
+    restart: unless-stopped
+    ports:
+      - "12002:3000"
+    environment:
+      - OLLAMA_BASE_URL=http://koboldcpp:5001
+      - WEBHOOK_URL=http://retriever:8000/openwebui_rag
+    depends_on:
+      - koboldcpp
+      - retriever
+
+  whisper:
+    image: ghcr.io/openai/whisper:latest
+    container_name: whisper
+    restart: unless-stopped
+    command: "--model ${WHISPER_MODEL:-base.en} --language en"
+    ports:
+      - "12003:9000"
+    volumes:
+      - ./audio:/audio
+
+  piper:
+    image: rhasspy/piper
+    container_name: piper
+    restart: unless-stopped
+    command: "--model ${PIPER_VOICE:-en_US-lessac-medium.onnx}"
+    ports:
+      - "12004:59125"
+    volumes:
+      - ./piper:/data
+
+  glances:
+    image: nicolargo/glances:latest
+    container_name: glances
+    restart: unless-stopped
+    ports:
+      - "12005:61208"
+    pid: "host"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GLANCES_OPT=-w
+
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    restart: unless-stopped
+    ports:
+      - "12006:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  retriever:
+    build: ./rag-stack
+    container_name: retriever
+    restart: unless-stopped
+    ports:
+      - "12007:8000"
+    depends_on:
+      - qdrant
+    volumes:
+      - ./rag-stack/docs:/app/docs
+    environment:
+      - BEND_API_KEY=${BEND_API_KEY}
+      - OTEL_SERVICE_NAME=retriever
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+
+  voiceproxy:
+    build: ./voice-proxy
+    container_name: voiceproxy
+    ports:
+      - "12008:8001"
+    depends_on:
+      - whisper
+      - piper
+    environment:
+      - BEND_API_KEY=${BEND_API_KEY}
+      - OTEL_SERVICE_NAME=voiceproxy
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+
+volumes:
+  qdrant_data:
+
+networks:
+  default:
+    name: aegis_bend_net
+    external: true

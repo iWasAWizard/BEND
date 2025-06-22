@@ -1,0 +1,43 @@
+# models.yaml — Cleaned and backendless
+
+models:
+  - key: hermes
+    name: Nous-Hermes-2-Mixtral-8x7B
+    filename: Nous-Hermes-2-Mixtral-8x7B.Q5_K_M.gguf
+    quant: Q5_K_M
+    context: 16K
+    use_case: general-purpose assistant
+    url: https://huggingface.co/TheBloke/Nous-Hermes-2-Mixtral-8x7B-GGUF/resolve/main/nous-hermes-2-mixtral-8x7b.Q5_K_M.gguf
+
+  - key: mythomax
+    name: MythoMax-L2-13B
+    filename: mythomax-l2-13b.Q5_K_M.gguf
+    quant: Q5_K_M
+    context: 8K
+    use_case: roleplay, lore-heavy chat
+    url: https://huggingface.co/TheBloke/MythoMax-L2-13B-GGUF/resolve/main/mythomax-l2-13b.Q5_K_M.gguf
+
+  - key: mistral
+    name: Mistral-7B-OpenOrca
+    filename: openorca-mistral-7b.Q5_K_M.gguf
+    quant: Q5_K_M
+    context: 8K
+    use_case: fast general chat, coding
+    url: https://huggingface.co/TheBloke/OpenOrca-Mistral-7B-GGUF/resolve/main/openorca-mistral-7b.Q5_K_M.gguf
+
+  - key: deepseek
+    name: DeepSeek-Coder-33B
+    filename: deepseek-coder-33b.Q4_K_M.gguf
+    quant: Q4_K_M
+    context: 16K
+    use_case: software dev, multi-file context
+    url: https://huggingface.co/TheBloke/deepseek-coder-33b-GGUF/resolve/main/deepseek-coder-33b.Q4_K_M.gguf
+
+  - key: rpbeagle
+    name: NeuralBeagle-RP-Mistral
+    filename: neuralbeagle-rp-mistral.Q5_K_M.gguf
+    quant: Q5_K_M
+    context: 8K
+    use_case: immersive RP, ST-friendly
+    url: https://huggingface.co/NeuralBeagle/RP-Mistral-GGUF/resolve/main/neuralbeagle-rp-mistral.Q5_K_M.gguf
+

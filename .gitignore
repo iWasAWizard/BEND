@@ -1,0 +1,47 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Model files
+models/*
+!models/.gitkeep
+
+# Audio input/output
+audio/*
+!audio/.gitkeep
+
+# Piper voice models
+piper/*
+!piper/.gitkeep
+
+# RAG doc uploads and DB storage
+rag-stack/docs/*
+!rag-stack/docs/.gitkeep
+rag-stack/qdrant/*
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Docker artifacts
+*.pid
+.vscode/
+.yq_cache/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Protect scripts
+!scripts/
+
+# Ensure tracked structure
+models/.gitkeep
+audio/.gitkeep
+piper/.gitkeep
+rag-stack/docs/.gitkeep
+
