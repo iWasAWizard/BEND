@@ -2,60 +2,64 @@ version: "3.9"
 
 services:
   koboldcpp:
-    image: ghcr.io/henk717/koboldcpp:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.koboldcpp
+      network: host
     container_name: koboldcpp
     restart: unless-stopped
     ports:
-      - "12009:5001"
+      - "${KOBOLD_PORT:-12009}:5001"
     volumes:
       - ./models:/models
     command: >
-      --model /models/${MODEL_NAME}
-      --threads 16
+      python3 koboldcpp.py /models/${MODEL_NAME}
+      --host 0.0.0.0
       --port 5001
-      --gpu-split auto
+      --threads ${KOBOLD_THREADS:-16}
       --contextsize ${MODEL_CONTEXT_SIZE}
-      --compress-loader
-      --mlock
-    # Enable this section if you have an NVIDIA GPU
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+      --gpulayers ${KOBOLD_GPU_LAYERS:-0}
 
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: openwebui
     restart: unless-stopped
     ports:
-      - "12002:3000"
+      - "${OPENWEBUI_PORT:-12002}:3000"
     environment:
-      - OLLAMA_BASE_URL=http://koboldcpp:5001
-      - WEBHOOK_URL=http://retriever:8000/openwebui_rag
+      # Use the OpenAI-compatible endpoint for OpenWebUI
+      - OPENAI_API_BASE_URL=http://koboldcpp:5001/v1
     depends_on:
       - koboldcpp
-      - retriever
 
   whisper:
-    image: ghcr.io/openai/whisper:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.whisper
+      network: host
     container_name: whisper
     restart: unless-stopped
-    command: "--model ${WHISPER_MODEL:-base.en} --language en"
+    # FIX: Use the correct binary name 'whisper-server'
+    command: >
+      ./build/bin/whisper-server
+      -m ./models/${WHISPER_MODEL_NAME:-ggml-base.en.bin}
+      -H 0.0.0.0
+      -P 9000
+      -g ${WHISPER_GPU_LAYERS:-0}
     ports:
-      - "12003:9000"
-    volumes:
-      - ./audio:/audio
+      - "${WHISPER_PORT:-12003}:9000"
 
   piper:
-    image: rhasspy/piper
+    build:
+      context: .
+      dockerfile: Dockerfile.piper
+      network: host
     container_name: piper
     restart: unless-stopped
-    command: "--model ${PIPER_VOICE:-en_US-lessac-medium.onnx}"
+    # Reverted from debug state back to the original command
+    command: "./piper/piper --model /data/${PIPER_VOICE:-en_US-lessac-medium.onnx} --port 59125 --host 0.0.0.0"
     ports:
-      - "12004:59125"
+      - "${PIPER_PORT:-12004}:59125"
     volumes:
       - ./piper:/data
 
@@ -64,7 +68,7 @@ services:
     container_name: glances
     restart: unless-stopped
     ports:
-      - "12005:61208"
+      - "${GLANCES_PORT:-12005}:61208"
     pid: "host"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -76,20 +80,22 @@ services:
     container_name: qdrant
     restart: unless-stopped
     ports:
-      - "12006:6333"
+      - "${QDRANT_PORT:-12006}:6333"
     volumes:
       - qdrant_data:/qdrant/storage
 
   retriever:
-    build: ./rag-stack
+    build:
+      context: ./rag
+      network: host
     container_name: retriever
     restart: unless-stopped
     ports:
-      - "12007:8000"
+      - "${RETRIEVER_PORT:-12007}:8000"
     depends_on:
       - qdrant
     volumes:
-      - ./rag-stack/docs:/app/docs
+      - ./rag/docs:/app/docs
     environment:
       - BEND_API_KEY=${BEND_API_KEY}
       - OTEL_SERVICE_NAME=retriever
@@ -98,8 +104,9 @@ services:
   voiceproxy:
     build: ./voice-proxy
     container_name: voiceproxy
+    restart: unless-stopped
     ports:
-      - "12008:8001"
+      - "${VOICEPROXY_PORT:-12008}:8001"
     depends_on:
       - whisper
       - piper

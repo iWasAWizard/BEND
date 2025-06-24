@@ -1,0 +1,37 @@
+# BEND/Dockerfile.koboldcpp
+# This Dockerfile builds KoboldCPP from source using the robust CMake system.
+
+FROM python:3.13-slim
+
+# Install build dependencies, including cmake.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    libclblast-dev \
+    cmake \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# No venv needed as we are not running a python script at the end.
+
+WORKDIR /app
+RUN git clone https://github.com/LostRuins/koboldcpp.git .
+
+# Install Python dependencies needed by the project.
+# We add --break-system-packages to comply with modern Debian policy.
+RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
+
+# --- GPU Build Logic ---
+# This build argument is passed from the docker-compose build command.
+ARG GPU_ENABLED=false
+
+# Build KoboldCPP.
+# If GPU_ENABLED is true, it builds with NVIDIA CUBLAS support.
+# Otherwise, it builds a portable CPU-only version.
+RUN if [ "$GPU_ENABLED" = "true" ]; then \
+    echo "Building KoboldCPP with NVIDIA CUBLAS support..."; \
+    make LLAMA_CUBLAS=1 -j $(nproc); \
+    else \
+    echo "Building KoboldCPP for CPU (portable)..."; \
+    make LLAMA_PORTABLE=1 -j $(nproc); \
+    fi

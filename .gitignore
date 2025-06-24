@@ -45,3 +45,7 @@ audio/.gitkeep
 piper/.gitkeep
 rag-stack/docs/.gitkeep
 
+# Dev stuff
+*.zip
+scratch.txt
+*.bin

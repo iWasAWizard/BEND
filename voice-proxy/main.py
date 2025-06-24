@@ -1,20 +1,11 @@
+from fastapi import FastAPI, UploadFile, File, Response, HTTPException, Depends, Header
+from pydantic import BaseModel
+from contextlib import asynccontextmanager
+import httpx
+import os
 import logging
 import sys
 from pythonjsonlogger import jsonlogger
-
-import os
-from contextlib import asynccontextmanager
-import httpx
-
-from fastapi import FastAPI, UploadFile, File, Response, HTTPException, Depends, Header
-from pydantic import BaseModel
-
-# OpenTelemetry Imports
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 # --- Logging Setup ---
 logHandler = logging.StreamHandler(sys.stdout)
@@ -25,6 +16,13 @@ logHandler.setFormatter(formatter)
 logging.basicConfig(handlers=[logHandler], level=logging.INFO)
 logging.getLogger("uvicorn.access").disabled = True
 # --- End Logging Setup ---
+
+# OpenTelemetry Imports
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 # --- Tracing Setup ---
 API_KEY = os.getenv("BEND_API_KEY")
@@ -71,13 +69,15 @@ async def transcribe(file: UploadFile = File(...)):
             if tracer
             else trace.get_tracer("noop").start_as_current_span("noop")
         ):
-            files = {"file": (file.filename, await file.read())}
+            # The new whisper-server does not need the model name in the payload.
+            # It only expects the multipart file upload.
+            files = {"file": (file.filename, await file.read(), file.content_type)}
             response = await clients["httpx"].post(
-                "http://whisper:9000/transcribe", files=files
+                "http://whisper:9000/inference", files=files
             )
             response.raise_for_status()
             return response.json()
-    except httpx.RequestError as e:
+    except httpx.RequestException as e:
         raise HTTPException(status_code=503, detail=f"Whisper service unavailable: {e}")
 
 
@@ -100,5 +100,5 @@ async def speak(data: SpeakRequest):
                 r.raise_for_status()
                 content = await r.aread()
                 return Response(content=content, media_type="audio/wav")
-    except httpx.RequestError as e:
+    except httpx.RequestException as e:
         raise HTTPException(status_code=503, detail=f"Piper service unavailable: {e}")

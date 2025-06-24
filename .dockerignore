@@ -1,0 +1,15 @@
+# Ignore directories that are mounted as volumes, not needed for the build context.
+models/
+stt-models/
+piper/
+
+# Ignore development and state files
+.git/
+.idea/
+*.pyc
+__pycache__/
+.env
+*.log
+
+# Ignore files specific to other stacks if they exist
+rag-stack/qdrant/
