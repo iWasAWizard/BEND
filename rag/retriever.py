@@ -13,11 +13,10 @@ from pydantic import BaseModel
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, UpdateStatus
 from sentence_transformers import SentenceTransformer
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # OpenTelemetry Imports
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import TracerProvider, NoOpTracer
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -36,6 +35,7 @@ logging.getLogger("uvicorn.access").disabled = True  # Disable default access lo
 # --- Tracing Setup ---
 API_KEY = os.getenv("BEND_API_KEY")
 OTEL_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+tracer: trace.Tracer
 
 if OTEL_ENDPOINT:
     provider = TracerProvider()
@@ -46,7 +46,8 @@ if OTEL_ENDPOINT:
     trace.set_tracer_provider(provider)
     tracer = trace.get_tracer(__name__)
 else:
-    tracer = None
+    # Use a No-op tracer if the endpoint isn't configured
+    tracer = NoOpTracer()
 # --- End Tracing Setup ---
 
 
@@ -77,27 +78,28 @@ except Exception:
     )
 
 
-def _embed_and_store_text(text: str, source: str):
-    with (
-        tracer.start_as_current_span("embed_and_store_text")
-        if tracer
-        else trace.get_tracer("noop").start_as_current_span("noop")
-    ):
-        with (
-            tracer.start_as_current_span("chunking_text")
-            if tracer
-            else trace.get_tracer("noop").start_as_current_span("noop")
-        ):
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=500, chunk_overlap=50
-            )
-            chunks = text_splitter.split_text(text)
+def _split_text(text: str, chunk_size: int = 500, chunk_overlap: int = 50) -> List[str]:
+    """A simple, dependency-free text splitter."""
+    if not text:
+        return []
 
-        with (
-            tracer.start_as_current_span("encoding_vectors")
-            if tracer
-            else trace.get_tracer("noop").start_as_current_span("noop")
-        ):
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = start + chunk_size
+        chunks.append(text[start:end])
+        start += chunk_size - chunk_overlap
+        if start >= len(text):
+            break
+    return chunks
+
+
+def _embed_and_store_text(text: str, source: str):
+    with tracer.start_as_current_span("embed_and_store_text"):
+        with tracer.start_as_current_span("chunking_text"):
+            chunks = _split_text(text, chunk_size=500, chunk_overlap=50)
+
+        with tracer.start_as_current_span("encoding_vectors"):
             vectors = model.encode(chunks).tolist()
 
         points = [
@@ -109,11 +111,7 @@ def _embed_and_store_text(text: str, source: str):
             for vec, chunk in zip(vectors, chunks)
         ]
 
-        with (
-            tracer.start_as_current_span("upsert_to_qdrant")
-            if tracer
-            else trace.get_tracer("noop").start_as_current_span("noop")
-        ):
+        with tracer.start_as_current_span("upsert_to_qdrant"):
             client.upsert(collection_name=COLLECTION, points=points, wait=True)
 
 
@@ -175,11 +173,7 @@ class QueryRequest(BaseModel):
 @app.post("/retrieve")
 def retrieve(req: QueryRequest):
     try:
-        with (
-            tracer.start_as_current_span("retrieve_from_qdrant")
-            if tracer
-            else trace.get_tracer("noop").start_as_current_span("noop")
-        ):
+        with tracer.start_as_current_span("retrieve_from_qdrant"):
             vec = model.encode(req.query).tolist()
             hits = client.search(
                 collection_name=COLLECTION, query_vector=vec, limit=req.top_k
@@ -216,11 +210,7 @@ class DeleteDocRequest(BaseModel):
 @app.delete("/documents")
 def delete_document(req: DeleteDocRequest):
     try:
-        with (
-            tracer.start_as_current_span("delete_from_qdrant")
-            if tracer
-            else trace.get_tracer("noop").start_as_current_span("noop")
-        ):
+        with tracer.start_as_current_span("delete_from_qdrant"):
             result = client.delete(
                 collection_name=COLLECTION,
                 points_selector=models.FilterSelector(
@@ -259,11 +249,7 @@ class OpenWebUIRequest(BaseModel):
 @app.post("/openwebui_rag", dependencies=[Depends(api_key_security)])
 def openwebui_rag(req: OpenWebUIRequest):
     try:
-        with (
-            tracer.start_as_current_span("openwebui_rag_retrieval")
-            if tracer
-            else trace.get_tracer("noop").start_as_current_span("noop")
-        ):
+        with tracer.start_as_current_span("openwebui_rag_retrieval"):
             vec = model.encode(req.query).tolist()
             hits = client.search(collection_name=COLLECTION, query_vector=vec, limit=3)
 

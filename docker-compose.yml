@@ -1,11 +1,17 @@
 version: "3.9"
 
+networks:
+  bend-net:
+    driver: bridge
+
 services:
   koboldcpp:
     build:
       context: .
-      dockerfile: Dockerfile.koboldcpp
-      network: host
+      dockerfile: Dockerfile.build-services
+      target: kobold-builder
+      args:
+        - GPU_ENABLED=${KOBOLD_GPU_ENABLED:-false}
     container_name: koboldcpp
     restart: unless-stopped
     ports:
@@ -13,12 +19,15 @@ services:
     volumes:
       - ./models:/models
     command: >
-      python3 koboldcpp.py /models/${MODEL_NAME}
+      python3 koboldcpp.py
+      --model /models/${MODEL_NAME}
       --host 0.0.0.0
       --port 5001
       --threads ${KOBOLD_THREADS:-16}
       --contextsize ${MODEL_CONTEXT_SIZE}
       --gpulayers ${KOBOLD_GPU_LAYERS:-0}
+    networks:
+      - bend-net
 
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
@@ -31,37 +40,49 @@ services:
       - OPENAI_API_BASE_URL=http://koboldcpp:5001/v1
     depends_on:
       - koboldcpp
+    networks:
+      - bend-net
+    profiles:
+      - "full"
 
   whisper:
     build:
       context: .
-      dockerfile: Dockerfile.whisper
-      network: host
+      dockerfile: Dockerfile.build-services
+      target: whisper-builder
+      args:
+        - GPU_ENABLED=${WHISPER_GPU_ENABLED:-false}
     container_name: whisper
     restart: unless-stopped
-    # FIX: Use the correct binary name 'whisper-server'
     command: >
       ./build/bin/whisper-server
-      -m ./models/${WHISPER_MODEL_NAME:-ggml-base.en.bin}
-      -H 0.0.0.0
-      -P 9000
-      -g ${WHISPER_GPU_LAYERS:-0}
+      -m ./models/${WHISPER_MODEL_NAME:-ggml-small.en.bin}
+      --host 0.0.0.0
+      --port 9000
+      --no-gpu
+      --convert
     ports:
       - "${WHISPER_PORT:-12003}:9000"
+    networks:
+      - bend-net
+    profiles:
+      - "full"
 
   piper:
     build:
       context: .
       dockerfile: Dockerfile.piper
-      network: host
     container_name: piper
     restart: unless-stopped
-    # Reverted from debug state back to the original command
     command: "./piper/piper --model /data/${PIPER_VOICE:-en_US-lessac-medium.onnx} --port 59125 --host 0.0.0.0"
     ports:
       - "${PIPER_PORT:-12004}:59125"
     volumes:
       - ./piper:/data
+    networks:
+      - bend-net
+    profiles:
+      - "full"
 
   glances:
     image: nicolargo/glances:latest
@@ -74,6 +95,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - GLANCES_OPT=-w
+    networks:
+      - bend-net
+    profiles:
+      - "full"
 
   qdrant:
     image: qdrant/qdrant
@@ -83,11 +108,14 @@ services:
       - "${QDRANT_PORT:-12006}:6333"
     volumes:
       - qdrant_data:/qdrant/storage
+    networks:
+      - bend-net
+    profiles:
+      - "full"
 
   retriever:
     build:
       context: ./rag
-      network: host
     container_name: retriever
     restart: unless-stopped
     ports:
@@ -100,6 +128,10 @@ services:
       - BEND_API_KEY=${BEND_API_KEY}
       - OTEL_SERVICE_NAME=retriever
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+    networks:
+      - bend-net
+    profiles:
+      - "full"
 
   voiceproxy:
     build: ./voice-proxy
@@ -114,11 +146,10 @@ services:
       - BEND_API_KEY=${BEND_API_KEY}
       - OTEL_SERVICE_NAME=voiceproxy
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+    networks:
+      - bend-net
+    profiles:
+      - "full"
 
 volumes:
   qdrant_data:
-
-networks:
-  default:
-    name: aegis_bend_net
-    external: true

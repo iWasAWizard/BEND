@@ -74,8 +74,7 @@ bend/
 │   └── healthcheck.sh
 ├── models/                  # GGUF + EXL2 model files
 ├── rag/                     # RAG API + vector database
-└── voice-proxy/             # Voice API proxy
-```
+└── voice-proxy/             # Voice API proxy```
 
 ---
 
@@ -91,8 +90,6 @@ bend/
 | 12007  | Retriever API|
 | 12008  | Voice Proxy  |
 | 12009  | KoboldCPP    |
-<<<<<<< HEAD
-=======
 
 ---
 
@@ -115,6 +112,3 @@ BEND is stable and deployable. It is also:
 
 > “You don’t build a backend like this for fun.
 > You build it because **you want the machine to talk back.**”
-```
-
->>>>>>> 0aa86007981b2a92ed1a61d3f5e1e0d777b7f122

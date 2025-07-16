@@ -19,7 +19,7 @@ logging.getLogger("uvicorn.access").disabled = True
 
 # OpenTelemetry Imports
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import TracerProvider, NoOpTracer
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -28,6 +28,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 API_KEY = os.getenv("BEND_API_KEY")
 OTEL_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 clients = {}
+tracer: trace.Tracer
 
 if OTEL_ENDPOINT:
     provider = TracerProvider()
@@ -38,7 +39,7 @@ if OTEL_ENDPOINT:
     trace.set_tracer_provider(provider)
     tracer = trace.get_tracer(__name__)
 else:
-    tracer = None
+    tracer = NoOpTracer()
 # --- End Tracing Setup ---
 
 
@@ -64,11 +65,7 @@ if OTEL_ENDPOINT:
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
     try:
-        with (
-            tracer.start_as_current_span("call_whisper_service")
-            if tracer
-            else trace.get_tracer("noop").start_as_current_span("noop")
-        ):
+        with tracer.start_as_current_span("call_whisper_service"):
             # The new whisper-server does not need the model name in the payload.
             # It only expects the multipart file upload.
             files = {"file": (file.filename, await file.read(), file.content_type)}
@@ -89,11 +86,7 @@ class SpeakRequest(BaseModel):
 async def speak(data: SpeakRequest):
     piper_url = "http://piper:59125/api/tts"
     try:
-        with (
-            tracer.start_as_current_span("call_piper_service")
-            if tracer
-            else trace.get_tracer("noop").start_as_current_span("noop")
-        ):
+        with tracer.start_as_current_span("call_piper_service"):
             async with clients["httpx"].stream(
                 "POST", piper_url, json={"text": data.text}
             ) as r:

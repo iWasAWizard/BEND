@@ -1,143 +1,88 @@
 #!/bin/bash
 
-# BEND Stack Management Script
-# Manages the services defined in docker-compose.yml.
+# A simple management script for the BEND stack.
+# Use this to start, stop, and manage the backend services.
 
-# Change to the script's directory to ensure docker-compose.yml is found.
-cd "$(dirname "$0")/.." || exit
+# --- Colors ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
 # --- Helper Functions ---
-print_usage() {
-    echo "Usage: $0 {up|up-debug|down|status|logs|switch|build|list|airgap-bundle} [--gpu]"
-    echo "  up [--gpu]        - Start all services in detached mode."
-    echo "  up-debug [--gpu]  - Start all services in the foreground to stream logs."
-    echo "  down              - Stop all services."
-    echo "  status            - Show the status of all services."
-    echo "  logs [service]    - Tail logs for a specific service (e.g., koboldcpp)."
-    echo "  switch [model_key]- Switch the active LLM model."
-    echo "  build [--gpu]     - Build all service images. Use --gpu for NVIDIA."
-    echo "  list              - List available models from models.yaml."
-    echo "  airgap-bundle     - Download all models and Docker images for offline deployment."
+print_info() {
+    echo -e "${BLUE}INFO: $1${NC}"
 }
 
-ensure_piper_model_exists() {
-    local model_dir="piper"
-    local model_name="en_US-lessac-medium.onnx"
-    local model_file="$model_dir/$model_name"
-    local config_file="$model_file.json"
-
-    mkdir -p "$model_dir"
-
-    if [ ! -f "$model_file" ] || [ ! -f "$config_file" ]; then
-        echo "==> Piper voice model not found. Downloading required files..."
-        if ! command -v wget &> /dev/null; then
-            echo "Error: wget is not installed. Please install it to download the model."
-            exit 1
-        fi
-        local base_url="https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium"
-        if [ ! -f "$model_file" ]; then
-            wget -q --show-progress -O "$model_file" "$base_url/$model_name"
-        fi
-        if [ ! -f "$config_file" ]; then
-            wget -q --show-progress -O "$config_file" "$base_url/$model_name.json"
-        fi
-        echo "✅ Piper model downloaded successfully."
-    else
-        echo "✅ Piper voice model found."
-    fi
+print_success() {
+    echo -e "${GREEN}SUCCESS: $1${NC}"
 }
 
-list_models() {
-    if ! command -v yq &> /dev/null; then
-        echo "Error: yq is not installed. Please install it to list models."
-        exit 1
-    fi
-
-    echo "Available Models (from models.yaml):"
-    printf "%-20s | %-40s | %-10s | %s\n" "Key" "Name" "Context" "Use Case"
-    echo "-------------------------------------------------------------------------------------------------------"
-
-    yq e '.models[] | .key + " | " + .name + " | " + .default_max_context_length + " | " + .use_case' models.yaml | \
-    while IFS="|" read -r key name context use_case; do
-        # Trim whitespace
-        key=$(echo "$key" | xargs)
-        name=$(echo "$name" | xargs)
-        context=$(echo "$context" | xargs)
-        use_case=$(echo "$use_case" | xargs)
-        printf "%-20s | %-40s | %-10s | %s\n" "$key" "$name" "$context" "$use_case"
-    done
+print_warn() {
+    echo -e "${YELLOW}WARN: $1${NC}"
 }
 
+print_error() {
+    echo -e "${RED}ERROR: $1${NC}"
+}
 
 # --- Main Logic ---
-ACTION=${1}
-shift || true
+COMMAND=$1
+ARG2=$2
 
-# Base docker-compose command setup
-COMPOSE_FILES="-f docker-compose.yml"
-BUILD_ARGS=""
-
-# Check for --gpu flag in the remaining arguments
-if [[ " $@ " =~ " --gpu " ]]; then
-    echo "🚀 GPU mode enabled. Applying NVIDIA configurations."
-    BUILD_ARGS="--build-arg GPU_ENABLED=true"
-    COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.gpu.yml"
+if [ -z "$COMMAND" ]; then
+    print_error "No command specified."
+    echo "Usage: $0 {up|down|rebuild|logs|status|healthcheck} [--lite]"
+    exit 1
 fi
 
-case "$ACTION" in
+case "$COMMAND" in
     up)
-        ensure_piper_model_exists
-        echo "==> Building and starting BEND services in detached mode..."
-        docker compose $COMPOSE_FILES up -d --build $BUILD_ARGS
+        if [ "$ARG2" == "--lite" ]; then
+            print_info "Starting BEND stack in LITE mode (KoboldCPP only)..."
+            docker compose up -d koboldcpp
+        else
+            print_info "Starting BEND stack in FULL mode..."
+            docker compose --profile full up -d
+        fi
+        print_success "BEND stack started. Use 'healthcheck' to verify services."
         ;;
-    up-debug)
-        ensure_piper_model_exists
-        echo "==> Building and starting BEND services in foreground (debug mode)..."
-        docker compose $COMPOSE_FILES up --build $BUILD_ARGS
-        ;;
+
     down)
-        echo "==> Stopping BEND services..."
-        docker compose $COMPOSE_FILES down
+        print_info "Stopping BEND stack..."
+        docker compose down "$@"
+        print_success "BEND stack stopped."
         ;;
-    status)
-        echo "==> BEND Service Status:"
-        docker compose $COMPOSE_FILES ps
+
+    rebuild)
+        print_info "Force rebuilding BEND stack..."
+        docker compose build --no-cache
+        print_success "Rebuild complete. Use 'up' to start."
         ;;
+
     logs)
-        SERVICE=${1:-"koboldcpp"}
-        echo "==> Tailing logs for '$SERVICE' (Ctrl+C to exit)..."
-        docker compose $COMPOSE_FILES logs -f "$SERVICE"
+        print_info "Tailing logs... (Ctrl+C to exit)"
+        docker compose logs -f "$ARG2"
         ;;
-    switch)
-        MODEL_KEY=${1}
-        if [ -z "$MODEL_KEY" ]; then
-            echo "Error: You must provide a model key."
+
+    status)
+        print_info "--- BEND Stack Status ---"
+        docker compose ps
+        ;;
+
+    healthcheck)
+        print_info "Performing healthcheck..."
+        if [ ! -f "scripts/healthcheck.py" ]; then
+            print_error "Healthcheck script not found at scripts/healthcheck.py"
             exit 1
         fi
-        echo "==> Switching model to '$MODEL_KEY'..."
-        ./scripts/switch-model.sh "$MODEL_KEY"
+        python3 scripts/healthcheck.py
         ;;
-    build)
-        echo "==> Building all BEND service images..."
-        docker compose $COMPOSE_FILES build $BUILD_ARGS
-        ;;
-    list)
-        list_models
-        ;;
-    airgap-bundle)
-        echo "==> Preparing BEND airgap bundle..."
-        # 1. Download all models
-        ./scripts/download-all-models.sh
-        # 2. Pull all docker images
-        echo "==> Pulling all required Docker images for BEND..."
-        docker compose $COMPOSE_FILES pull
-        # 3. Save images to a tarball
-        echo "==> Saving images to bend-images.tar..."
-        docker save $(docker compose $COMPOSE_FILES config --images) -o bend-images.tar
-        echo "✅ BEND airgap bundle preparation complete."
-        ;;
+
     *)
-        print_usage
+        print_error "Unknown command: '$COMMAND'"
+        echo "Usage: $0 {up|down|rebuild|logs|status|healthcheck} [--lite]"
         exit 1
         ;;
 esac

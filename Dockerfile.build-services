@@ -1,0 +1,57 @@
+# BEND/Dockerfile.build-services
+# A unified, multi-stage Dockerfile for building C++ based services.
+
+# --- Stage 1: Common Base Layer ---
+# This stage installs all dependencies required by any C++ build.
+FROM python:3.13-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    libclblast-dev \
+    cmake \
+    python3-pip \
+    curl \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# --- Stage 2: KoboldCPP Builder ---
+# This stage builds the koboldcpp binary using the original make system.
+FROM base AS kobold-builder
+WORKDIR /app
+RUN git clone https://github.com/LostRuins/koboldcpp.git .
+RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
+
+# This build argument is passed from the docker-compose build command.
+ARG GPU_ENABLED=false
+RUN if [ "$GPU_ENABLED" = "true" ]; then \
+    echo "Building KoboldCPP with NVIDIA CUBLAS support..."; \
+    make LLAMA_CUBLAS=1 -j$(nproc); \
+    else \
+    echo "Building KoboldCPP for CPU (portable)..."; \
+    make LLAMA_PORTABLE=1 -j$(nproc); \
+    fi
+# The resulting .so file is used by koboldcpp.py
+
+
+# --- Stage 3: Whisper.cpp Builder ---
+# This stage builds the whisper.cpp binaries using make.
+FROM base AS whisper-builder
+WORKDIR /app
+RUN git clone --recurse-submodules https://github.com/ggerganov/whisper.cpp.git .
+RUN ./models/download-ggml-model.sh small.en
+
+# Add the specific CFLAGS needed for a portable build, preventing assembler errors.
+ENV CFLAGS="-march=native -mtune=native -DGGML_NATIVE=OFF"
+ENV CXXFLAGS="${CFLAGS}"
+
+# This build argument is passed from the docker-compose build command.
+ARG GPU_ENABLED=false
+RUN if [ "$GPU_ENABLED" = "true" ]; then \
+    echo "Building whisper.cpp with NVIDIA CUBLAS support..."; \
+    make cublas; \
+    else \
+    echo "Building whisper.cpp for CPU..."; \
+    make; \
+    fi
+# The resulting binaries are in /app/build/bin/
