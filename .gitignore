@@ -45,7 +45,18 @@ audio/.gitkeep
 piper/.gitkeep
 rag-stack/docs/.gitkeep
 
-# Dev stuff
+# Constructed packages
 *.zip
+*.tar
+*.tar.gz
+
+# Temporary stuff
 scratch.txt
+tmp/
+temp/
+ollama_data/
+
+# Binaries and modelfiles
 *.bin
+*.gguf
+*.safetensors

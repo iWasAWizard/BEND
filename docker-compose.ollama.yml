@@ -1,0 +1,20 @@
+# BEND/docker-compose.ollama.yml
+version: "3.9"
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    restart: unless-stopped
+    command: >
+      ollama run
+      mistral-7b-openorca
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
+    networks:
+      - bend-net
+
+volumes:
+  ollama_data:

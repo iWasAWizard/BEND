@@ -4,13 +4,13 @@ models:
   # === Models for BEND's KoboldCPP backend ===
   - key: "hermes"
     name: "Nous-Hermes-2-Mixtral-8x7B"
-    backend_model_name: "Nous-Hermes-2-Mixtral-8x7B.Q5_K_M.gguf"
+    backend_model_name: "Nous-Hermes-2-Mixtral-8x7B.Q4_K_M.gguf"
     filename_pattern: ["nous-hermes-2-mixtral-8x7b"]
     formatter_hint: "chatml" # Hermes models typically use ChatML
     default_max_context_length: 16384
-    quant_example: "Q5_K_M"
+    quant_example: "Q4_K_M"
     use_case: "General-purpose assistant, strong reasoning"
-    url: "https://huggingface.co/TheBloke/Nous-Hermes-2-Mixtral-8x7B-GGUF/resolve/main/nous-hermes-2-mixtral-8x7b.Q5_K_M.gguf"
+    url: "https://huggingface.co/TheBloke/Nous-Hermes-2-Mixtral-8x7B-GGUF/resolve/main/nous-hermes-2-mixtral-8x7b.Q4_K_M.gguf"
     notes: "Primary model for BEND's KoboldCPP. Set via switch-model.sh."
 
   - key: "mythomax"
@@ -21,17 +21,17 @@ models:
     default_max_context_length: 8192
     quant_example: "Q5_K_M"
     use_case: "Roleplay, lore-heavy chat"
-    url: "https://huggingface.co/TheBloke/MythoMax-L2-13B-GGUF/resolve/main/mythomax-l2-13b.Q5_K_M.gguf"
+    url: "https://huggingface.co/TheBloke/MythoMax-L2-13B-GGUF/resolve/main/mythomax-l2-13b.Q4_K_M.gguf"
 
   - key: "mistral-openorca"
     name: "Mistral-7B-OpenOrca"
-    backend_model_name: "mistral-7b-openorca.Q5_K_M.gguf"
+    backend_model_name: "mistral-7b-openorca.Q4_K_M.gguf"
     filename_pattern: ["mistral-7b-openorca"]
     formatter_hint: "chatml" # OpenOrca datasets often use ChatML
     default_max_context_length: 8192
-    quant_example: "Q5_K_M"
+    quant_example: "Q4_K_M"
     use_case: "Fast general chat, coding"
-    url: "https://huggingface.co/TheBloke/OpenOrca-Mistral-7B-GGUF/resolve/main/openorca-mistral-7b.Q5_K_M.gguf"
+    url: "https://huggingface.co/TheBloke/Mistral-7B-OpenOrca-GGUF/resolve/main/mistral-7b-openorca.Q4_K_M.gguf"
 
   - key: "deepseek-coder"
     name: "DeepSeek-Coder-33B"

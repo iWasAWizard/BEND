@@ -28,47 +28,71 @@ print_error() {
 }
 
 # --- Main Logic ---
+cd "$(dirname "$0")/.." # Ensure we are in the BEND root directory
+
 COMMAND=$1
-ARG2=$2
+shift || true # Shift arguments, allowing us to pass the rest to docker-compose
+
+# Load environment variables from .env file
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+fi
+
+# Determine which backend compose file to use based on the .env variable
+BACKEND_COMPOSE_FILE=""
+if [ "$BEND_LLM_BACKEND" == "ollama" ]; then
+    BACKEND_COMPOSE_FILE="-f docker-compose.ollama.yml"
+elif [ "$BEND_LLM_BACKEND" == "koboldcpp" ]; then
+    BACKEND_COMPOSE_FILE="-f docker-compose.koboldcpp.yml"
+else
+    print_warn "BEND_LLM_BACKEND not set in .env. No LLM service will be started."
+    print_warn "Run './scripts/switch-backend.sh [koboldcpp|ollama]' to configure."
+fi
+
+# Check for --gpu flag in the remaining arguments
+GPU_FLAG=""
+if [[ " $@ " =~ " --gpu " ]]; then
+  GPU_FLAG="-f docker-compose.gpu.yml"
+  # This is a simple way to filter out the flag; a more robust script would parse args properly
+  set -- "${@/--gpu/}"
+fi
+
+# Construct the base docker-compose command with all necessary files
+BASE_CMD="docker compose -f docker-compose.yml ${BACKEND_COMPOSE_FILE} ${GPU_FLAG}"
 
 if [ -z "$COMMAND" ]; then
     print_error "No command specified."
-    echo "Usage: $0 {up|down|rebuild|logs|status|healthcheck} [--lite]"
+    echo "Usage: $0 {up|down|rebuild|logs|status|healthcheck} [--gpu] [docker-compose-args...]"
     exit 1
 fi
 
 case "$COMMAND" in
     up)
-        if [ "$ARG2" == "--lite" ]; then
-            print_info "Starting BEND stack in LITE mode (KoboldCPP only)..."
-            docker compose up -d koboldcpp
-        else
-            print_info "Starting BEND stack in FULL mode..."
-            docker compose --profile full up -d
-        fi
+        print_info "Starting BEND stack with backend: ${BEND_LLM_BACKEND:-none}"
+        $BASE_CMD up -d --remove-orphans "$@"
         print_success "BEND stack started. Use 'healthcheck' to verify services."
         ;;
 
     down)
         print_info "Stopping BEND stack..."
-        docker compose down "$@"
+        $BASE_CMD down "$@"
         print_success "BEND stack stopped."
         ;;
 
     rebuild)
         print_info "Force rebuilding BEND stack..."
-        docker compose build --no-cache
+        $BASE_CMD build --no-cache "$@"
         print_success "Rebuild complete. Use 'up' to start."
         ;;
 
     logs)
         print_info "Tailing logs... (Ctrl+C to exit)"
-        docker compose logs -f "$ARG2"
+        $BASE_CMD logs -f "$@"
         ;;
 
     status)
         print_info "--- BEND Stack Status ---"
-        docker compose ps
+        $BASE_CMD ps "$@"
         ;;
 
     healthcheck)
@@ -82,7 +106,7 @@ case "$COMMAND" in
 
     *)
         print_error "Unknown command: '$COMMAND'"
-        echo "Usage: $0 {up|down|rebuild|logs|status|healthcheck} [--lite]"
+        echo "Usage: $0 {up|down|rebuild|logs|status|healthcheck} [--gpu] [docker-compose-args...]"
         exit 1
         ;;
 esac

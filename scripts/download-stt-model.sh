@@ -10,7 +10,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-MODEL_NAME="ggml-base.en.bin"
+MODEL_NAME="ggml-small.en.bin"
 STT_MODELS_DIR="stt-models"
 DEST_PATH="${STT_MODELS_DIR}/${MODEL_NAME}"
 URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${MODEL_NAME}"

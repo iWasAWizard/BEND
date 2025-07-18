@@ -5,30 +5,6 @@ networks:
     driver: bridge
 
 services:
-  koboldcpp:
-    build:
-      context: .
-      dockerfile: Dockerfile.build-services
-      target: kobold-builder
-      args:
-        - GPU_ENABLED=${KOBOLD_GPU_ENABLED:-false}
-    container_name: koboldcpp
-    restart: unless-stopped
-    ports:
-      - "${KOBOLD_PORT:-12009}:5001"
-    volumes:
-      - ./models:/models
-    command: >
-      python3 koboldcpp.py
-      --model /models/${MODEL_NAME}
-      --host 0.0.0.0
-      --port 5001
-      --threads ${KOBOLD_THREADS:-16}
-      --contextsize ${MODEL_CONTEXT_SIZE}
-      --gpulayers ${KOBOLD_GPU_LAYERS:-0}
-    networks:
-      - bend-net
-
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: openwebui
@@ -36,14 +12,14 @@ services:
     ports:
       - "${OPENWEBUI_PORT:-12002}:3000"
     environment:
-      # Use the OpenAI-compatible endpoint for OpenWebUI
-      - OPENAI_API_BASE_URL=http://koboldcpp:5001/v1
-    depends_on:
-      - koboldcpp
+      - OLLM_API_BASE_URL=${OLLM_API_BASE_URL}
+      - WEBUI_URL=http://localhost:12002
+      - PORT=3000
+      - ENABLE_PERSISTENT_CONFIG=false
+    volumes:
+      - openwebui_data:/app/backend/data
     networks:
       - bend-net
-    profiles:
-      - "full"
 
   whisper:
     build:
@@ -54,19 +30,10 @@ services:
         - GPU_ENABLED=${WHISPER_GPU_ENABLED:-false}
     container_name: whisper
     restart: unless-stopped
-    command: >
-      ./build/bin/whisper-server
-      -m ./models/${WHISPER_MODEL_NAME:-ggml-small.en.bin}
-      --host 0.0.0.0
-      --port 9000
-      --no-gpu
-      --convert
     ports:
       - "${WHISPER_PORT:-12003}:9000"
     networks:
       - bend-net
-    profiles:
-      - "full"
 
   piper:
     build:
@@ -74,15 +41,17 @@ services:
       dockerfile: Dockerfile.piper
     container_name: piper
     restart: unless-stopped
-    command: "./piper/piper --model /data/${PIPER_VOICE:-en_US-lessac-medium.onnx} --port 59125 --host 0.0.0.0"
+    environment:
+      - LD_LIBRARY_PATH=./piper
+    command: >
+      python3 -m piper.http_server
+      --model /data/${PIPER_VOICE:-en_US-lessac-medium}.onnx
+      --port 59125
+      --host 0.0.0.0
     ports:
       - "${PIPER_PORT:-12004}:59125"
-    volumes:
-      - ./piper:/data
     networks:
       - bend-net
-    profiles:
-      - "full"
 
   glances:
     image: nicolargo/glances:latest
@@ -97,8 +66,6 @@ services:
       - GLANCES_OPT=-w
     networks:
       - bend-net
-    profiles:
-      - "full"
 
   qdrant:
     image: qdrant/qdrant
@@ -110,8 +77,6 @@ services:
       - qdrant_data:/qdrant/storage
     networks:
       - bend-net
-    profiles:
-      - "full"
 
   retriever:
     build:
@@ -130,8 +95,6 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
       - bend-net
-    profiles:
-      - "full"
 
   voiceproxy:
     build: ./voice-proxy
@@ -148,8 +111,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
       - bend-net
-    profiles:
-      - "full"
 
 volumes:
   qdrant_data:
+  openwebui_data:

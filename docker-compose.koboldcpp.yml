@@ -1,0 +1,31 @@
+# BEND/docker-compose.koboldcpp.yml
+version: "3.9"
+
+services:
+  koboldcpp:
+    build:
+      context: .
+      dockerfile: Dockerfile.build-services
+      target: kobold-builder
+      args:
+        - GPU_ENABLED=${KOBOLD_GPU_ENABLED:-false}
+    container_name: koboldcpp
+    restart: unless-stopped
+    ports:
+      - "${KOBOLD_PORT:-12009}:5001"
+    volumes:
+      - ./models:/models
+    command: >
+      python3 koboldcpp.py
+      --model /models/${MODEL_NAME}
+      --host 0.0.0.0
+      --port 5001
+      --threads ${KOBOLD_THREADS:-16}
+      --contextsize ${MODEL_CONTEXT_SIZE}
+      --gpulayers ${KOBOLD_GPU_LAYERS:-0}
+      --contextsize 8192
+      --smartcontext
+      --usemlock
+      --use-clblast 0 0
+    networks:
+      - bend-net
