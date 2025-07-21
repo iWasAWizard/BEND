@@ -44,9 +44,11 @@ if [ "$BEND_LLM_BACKEND" == "ollama" ]; then
     BACKEND_COMPOSE_FILE="-f docker-compose.ollama.yml"
 elif [ "$BEND_LLM_BACKEND" == "koboldcpp" ]; then
     BACKEND_COMPOSE_FILE="-f docker-compose.koboldcpp.yml"
+elif [ "$BEND_LLM_BACKEND" == "exl2" ]; then
+    BACKEND_COMPOSE_FILE="-f docker-compose.exl2.yml"
 else
     print_warn "BEND_LLM_BACKEND not set in .env. No LLM service will be started."
-    print_warn "Run './scripts/switch-backend.sh [koboldcpp|ollama]' to configure."
+    print_warn "Run './scripts/switch-backend.sh [koboldcpp|ollama|exl2]' to configure."
 fi
 
 # Check for --gpu flag in the remaining arguments
@@ -80,7 +82,7 @@ case "$COMMAND" in
         ;;
 
     rebuild)
-        print_info "Force rebuilding BEND stack..."
+        print_info "Force rebuilding BEND services..."
         $BASE_CMD build --no-cache "$@"
         print_success "Rebuild complete. Use 'up' to start."
         ;;
