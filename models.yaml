@@ -1,9 +1,12 @@
+# BEND/models.yaml
 # models.yaml — Consolidated model registry for BEND and AEGIS
 
 models:
-  # === Models for BEND's KoboldCPP backend ===
+  # === Models for vLLM (Primary) and KoboldCPP (GGUF Fallback) ===
   - key: "hermes"
-    name: "hf.co/NousResearch/Nous-Hermes-2-Mistral-7B-DPO-GGUF:Q4_K_M"
+    # The 'name' field is the Hugging Face repo ID for vLLM
+    name: "NousResearch/Nous-Hermes-2-Mistral-7B-DPO"
+    # The 'backend_model_name' is the specific .gguf filename for KoboldCPP
     backend_model_name: "Nous-Hermes-2-Mistral-7B-DPO-GGUF.Q4_K_M.gguf"
     filename_pattern: ["nous-hermes-2-mistral-7b"]
     formatter_hint: "chatml" # Hermes models typically use ChatML
@@ -11,10 +14,10 @@ models:
     quant_example: "Q4_K_M"
     use_case: "General-purpose assistant, strong reasoning"
     url: "https://huggingface.co/TheBloke/Nous-Hermes-2-Mistral-7B-DPO-GGUF/resolve/main/nous-hermes-2-mistral-7b.Q4_K_M.gguf"
-    notes: "Primary model for BEND's KoboldCPP. Set via switch-model.sh."
+    notes: "Primary model for BEND. Set via switch-model.sh."
 
   - key: "mythomax"
-    name: "MythoMax-L2-13B"
+    name: "Gryphe/MythoMax-L2-13b"
     backend_model_name: "mythomax-l2-13b.Q5_K_M.gguf"
     filename_pattern: ["mythomax-l2-13b"]
     formatter_hint: "alpaca" # MythoMax is often fine-tuned on Alpaca format
@@ -24,8 +27,8 @@ models:
     url: "https://huggingface.co/TheBloke/MythoMax-L2-13B-GGUF/resolve/main/mythomax-l2-13b.Q4_K_M.gguf"
 
   - key: "mistral-openorca"
-    name: "Mistral-7B-OpenOrca"
-    backend_model_name: "hf.co/TheBloke/Mistral-7B-OpenOrca-GGUF:Q4_K_M"
+    name: "Open-Orca/Mistral-7B-OpenOrca"
+    backend_model_name: "mistral-7b-openorca.Q4_K_M.gguf"
     filename_pattern: ["mistral-7b-openorca"]
     formatter_hint: "chatml" # OpenOrca datasets often use ChatML
     default_max_context_length: 8192
@@ -34,7 +37,7 @@ models:
     url: "https://huggingface.co/TheBloke/Mistral-7B-OpenOrca-GGUF/resolve/main/mistral-7b-openorca.Q4_K_M.gguf"
 
   - key: "deepseek-coder"
-    name: "DeepSeek-Coder-33B"
+    name: "deepseek-ai/deepseek-coder-33b-instruct"
     backend_model_name: "deepseek-coder-33b.Q4_K_M.gguf"
     filename_pattern: ["deepseek-coder-33b"]
     formatter_hint: "codellama-instruct" # Deepseek Coder uses a similar format
@@ -44,7 +47,7 @@ models:
     url: "https://huggingface.co/TheBloke/deepseek-coder-33b-GGUF/resolve/main/deepseek-coder-33b.Q4_K_M.gguf"
 
   - key: "kobold-llama3-gguf"
-    name: "Llama 3 8B Instruct (GGUF)"
+    name: "meta-llama/Meta-Llama-3-8B-Instruct"
     backend_model_name: "Llama-3-8B-Instruct-IQ4_XS.gguf"
     filename_pattern: ["Llama-3-8B-Instruct-IQ4_XS.gguf", "Llama-3-8B-Instruct"]
     formatter_hint: "llama3"
@@ -52,4 +55,4 @@ models:
     quant_example: "IQ4_XS"
     use_case: "General-purpose assistant, strong reasoning"
     url: "https://huggingface.co/QuantFactory/Llama-3-8B-Instruct-GGUF/resolve/main/Llama-3-8B-Instruct-IQ4_XS.gguf"
-    notes: "For use with KoboldCPP. Assumes KOBOLDCPP_MODEL env var points to this GGUF."
+    notes: "For use with KoboldCPP. Assumes KOBOLDCPP_MODEL env var points to this GGUF."```

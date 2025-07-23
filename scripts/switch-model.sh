@@ -1,73 +1,70 @@
-#!/bin/bash
 # BEND/scripts/switch-model.sh
+#!/bin/bash
+# A script to switch the active LLM by updating the .env file.
+# It reads model metadata from models.yaml using yq.
 
-set -e
-cd "$(dirname "$0")/.." # Move to BEND root directory
+# --- Colors ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# --- Helper Function ---
-# Idempotently sets a variable in the .env file.
-# Updates the value if the key exists, otherwise appends the key-value pair.
-# Usage: set_env_var "KEY" "VALUE"
-set_env_var() {
-    local key=$1
-    local value=$2
-    local file=".env"
+# --- Main Logic ---
+cd "$(dirname "$0")/.." || exit # Ensure we are in the BEND root directory
 
-    # Ensure the file exists before trying to modify it
-    touch "$file"
+if [ -z "$1" ]; then
+    echo -e "${RED}ERROR: No model key provided.${NC}"
+    echo "Usage: $0 <model_key>"
+    echo "Example: $0 hermes"
+    echo -e "\nAvailable model keys from models.yaml:"
+    yq e '.models[].key' models.yaml
+    exit 1
+fi
 
-    # Check if the key already exists (match the start of the line)
+MODEL_KEY=$1
+ENV_FILE=".env"
+
+# Use yq to find the model entry by its key and extract its properties
+MODEL_DATA=$(yq e ".models[] | select(.key == \"$MODEL_KEY\")" models.yaml)
+
+if [ -z "$MODEL_DATA" ]; then
+    echo -e "${RED}ERROR: Model key '$MODEL_KEY' not found in models.yaml.${NC}"
+    exit 1
+fi
+
+# Extract the required fields using yq
+MODEL_NAME=$(echo "$MODEL_DATA" | yq e '.name' -)
+KOBOLDCPP_MODEL_NAME=$(echo "$MODEL_DATA" | yq e '.backend_model_name' -)
+CONTEXT_SIZE=$(echo "$MODEL_DATA" | yq e '.default_max_context_length' -)
+
+echo -e "${BLUE}Switching to model: ${YELLOW}$MODEL_NAME${NC}"
+
+# --- Non-destructive .env update ---
+touch "$ENV_FILE" # Create the file if it doesn't exist
+
+update_or_add_line() {
+    local key="$1"
+    local value="$2"
+    local file="$3"
     if grep -q "^${key}=" "$file"; then
-        # Key exists, so replace the line.
-        # Using a different separator for sed to handle URLs gracefully.
-        # The -i '' syntax is required for macOS/BSD sed compatibility.
-        sed -i '' "s|^${key}=.*|${key}=${value}|" "$file"
+        # Key exists, so we update it. Using a temp file for sed is safer.
+        sed -i.bak "s|^${key}=.*|${key}=${value}|" "$file"
+        rm "${file}.bak"
     else
-        # Key does not exist, so append it.
+        # Key does not exist, so we append it.
         echo "${key}=${value}" >> "$file"
     fi
 }
 
+update_or_add_line "MODEL_NAME" "$MODEL_NAME" "$ENV_FILE"
+update_or_add_line "KOBOLDCPP_MODEL_NAME" "$KOBOLDCPP_MODEL_NAME" "$ENV_FILE"
+update_or_add_line "MODEL_CONTEXT_SIZE" "$CONTEXT_SIZE" "$ENV_FILE"
+update_or_add_line "VLLM_GPU_MEMORY_UTILIZATION" "0.90" "$ENV_FILE"
+update_or_add_line "KOBOLD_GPU_LAYERS" "50" "$ENV_FILE"
+update_or_add_line "WHISPER_GPU_LAYERS" "99" "$ENV_FILE"
+update_or_add_line "OLLM_API_BASE_URL" "http://vllm:8000/v1" "$ENV_FILE"
 
-# --- Main Logic ---
-MODEL_ALIAS=$1
-MODELS_FILE="models.yaml"
-
-# 1. Check for 'yq' dependency
-if ! command -v yq &> /dev/null; then
-    echo -e "\033[0;31mERROR: 'yq' is not installed.\033[0m"
-    echo "Please install yq to use this script (e.g., 'brew install yq' or 'pip install yq')."
-    exit 1
-fi
-
-# 2. Check for model alias argument
-if [ -z "$MODEL_ALIAS" ]; then
-    echo -e "\033[0;31mERROR: No model alias provided.\033[0m"
-    echo "Usage: $0 <model_alias>"
-    echo -e "\nAvailable model aliases in ${MODELS_FILE}:"
-    yq e '.models[].key' "$MODELS_FILE" | sed 's/^/- /'
-    exit 1
-fi
-
-echo "Attempting to switch KoboldCPP model to '$MODEL_ALIAS'..."
-
-# 3. Parse models.yaml to find the model info
-MODEL_FILENAME=$(yq e '.models[] | select(.key == "'"$MODEL_ALIAS"'") | .backend_model_name' "$MODELS_FILE")
-CONTEXT_SIZE=$(yq e '.models[] | select(.key == "'"$MODEL_ALIAS"'") | .default_max_context_length' "$MODELS_FILE")
-
-# 4. Validate that the model was found
-if [ -z "$MODEL_FILENAME" ] || [ "$MODEL_FILENAME" == "null" ]; then
-    echo -e "\033[0;31mERROR: Model alias '$MODEL_ALIAS' not found in ${MODELS_FILE}.\033[0m"
-    echo "Please choose from the available aliases:"
-    yq e '.models[].key' "$MODELS_FILE" | sed 's/^/- /'
-    exit 1
-fi
-
-# 5. Set the environment variables idempotently
-set_env_var "MODEL_NAME" "$MODEL_FILENAME"
-set_env_var "MODEL_CONTEXT_SIZE" "$CONTEXT_SIZE"
-
-echo -e "\033[0;32mSUCCESS: KoboldCPP model configuration updated in .env file:\033[0m"
-echo "  - MODEL_NAME=${MODEL_FILENAME}"
-echo "  - MODEL_CONTEXT_SIZE=${CONTEXT_SIZE}"
-echo "Run './scripts/switch-backend.sh koboldcpp' and then './scripts/manage.sh up' to apply."
+echo -e "${GREEN}SUCCESS: .env file has been configured for '$MODEL_KEY'.${NC}"
+echo "User-defined variables in .env have been preserved."
+echo "You can now start the stack with './scripts/manage.sh up'"

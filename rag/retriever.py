@@ -1,6 +1,6 @@
 import logging
 import sys
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger import json
 
 import os, uuid, shutil
 from typing import List, Dict, Any
@@ -24,7 +24,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 # --- Logging Setup ---
 # Configure root logger for structured JSON logging
 logHandler = logging.StreamHandler(sys.stdout)
-formatter = jsonlogger.JsonFormatter(
+formatter = json.JsonFormatter(
     fmt="%(asctime)s %(name)s %(levelname)s %(message)s"
 )
 logHandler.setFormatter(formatter)

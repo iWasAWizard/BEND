@@ -1,0 +1,23 @@
+# BEND/guardrails/config/config.co
+# Defines the core behavior of the guardrails.
+
+# 1. Define custom LLM and embeddings for the guardrails if needed.
+#    For now, we'll use the defaults which are sufficient for rule-based checks.
+
+# 2. Define a user intent for when the agent wants to run a tool.
+define user express intent to run tool
+  "I want to run the tool named '{$tool_name}' with arguments '{$tool_args}'"
+
+# 3. Define a flow that uses this intent to block a dangerous command.
+define flow block dangerous shell commands
+  user express intent to run tool
+
+  # Check if the tool is 'run_local_command' and if its 'command' argument
+  # contains the dangerous 'rm -rf' string.
+  if $tool_name == "run_local_command" and "rm -rf" in $tool_args.command
+    bot inform user of blocked command
+    stop
+
+# 4. Define the bot's response when the command is blocked.
+define bot inform user of blocked command
+  "I'm sorry, I cannot execute that command. It contains a dangerous pattern ('rm -rf') and has been blocked by security guardrails."

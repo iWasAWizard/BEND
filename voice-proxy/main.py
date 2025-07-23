@@ -5,11 +5,11 @@ import httpx
 import os
 import logging
 import sys
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger import json
 
 # --- Logging Setup ---
 logHandler = logging.StreamHandler(sys.stdout)
-formatter = jsonlogger.JsonFormatter(
+formatter = json.JsonFormatter(
     fmt="%(asctime)s %(name)s %(levelname)s %(message)s"
 )
 logHandler.setFormatter(formatter)

@@ -1,3 +1,4 @@
+# BEND/docker-compose.yml
 version: "3.9"
 
 networks:
@@ -112,6 +113,97 @@ services:
     networks:
       - bend-net
 
+  koboldcpp:
+    build:
+      context: .
+      dockerfile: Dockerfile.build-services
+      target: kobold-builder
+      args:
+        - GPU_ENABLED=${KOBOLD_GPU_ENABLED:-false}
+    container_name: koboldcpp
+    restart: unless-stopped
+    ports:
+      - "${KOBOLD_PORT:-12009}:5001"
+    volumes:
+      - ./models:/models
+    command: >
+      python3 koboldcpp.py
+      --model /models/${KOBOLDCPP_MODEL_NAME}
+      --host 0.0.0.0
+      --port 5001
+      --threads ${KOBOLD_THREADS:-16}
+      --contextsize ${MODEL_CONTEXT_SIZE}
+      --gpulayers ${KOBOLD_GPU_LAYERS:-0}
+      --smartcontext
+      --usemlock
+    networks:
+      - bend-net
+
+  redis:
+    image: redis/redis-stack:latest
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-12010}:6379"
+    networks:
+      - bend-net
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm
+    restart: unless-stopped
+    ports:
+      - "${VLLM_PORT:-12011}:8000"
+    volumes:
+      - ./models:/root/.cache/huggingface/hub
+    command: >
+      --model ${MODEL_NAME}
+      --served-model-name aegis-agent-model
+      --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
+    networks:
+      - bend-net
+
+  langfuse-server:
+    image: langfuse/langfuse:latest
+    container_name: langfuse-server
+    restart: unless-stopped
+    depends_on:
+      - langfuse-db
+    ports:
+      - "${LANGFUSE_PORT:-12012}:3000"
+    environment:
+      - DATABASE_URL=postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+      - NEXTAUTH_SECRET=mysecret
+      - SALT=mysecretsalt
+      - NEXTAUTH_URL=http://localhost:3000
+    networks:
+      - bend-net
+
+  langfuse-db:
+    image: postgres:15
+    container_name: langfuse-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=langfuse
+      - POSTGRES_PASSWORD=langfuse
+      - POSTGRES_DB=langfuse
+    volumes:
+      - langfuse_db_data:/var/lib/postgresql/data
+    networks:
+      - bend-net
+
+  nemoguardrails:
+    build:
+      context: .
+      dockerfile: Dockerfile.nemo
+    container_name: nemoguardrails
+    restart: unless-stopped
+    ports:
+      - "${GUARDRAILS_PORT:-12013}:8000"
+    networks:
+      - bend-net
+
 volumes:
   qdrant_data:
   openwebui_data:
+  langfuse_db_data:

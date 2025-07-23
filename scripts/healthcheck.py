@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
 # BEND/scripts/healthcheck.py
+#!/usr/bin/env python3
 """
 A simple healthcheck script for the BEND stack.
 Curls the primary endpoints of each service to verify they are responsive.
@@ -21,7 +21,9 @@ class Colors:
 # --- Service Definitions ---
 # URLs are configured to be called from the host machine, matching docker-compose ports.
 SERVICES = {
-    "KoboldCPP": os.getenv("KOBOLD_URL", "http://localhost:12009/api/v1/model"),
+    "vLLM": os.getenv("VLLM_URL", "http://localhost:12011/health"),
+    "LangFuse": os.getenv("LANGFUSE_URL", "http://localhost:12012/api/public/health"),
+    "Guardrails": os.getenv("GUARDRAILS_URL", "http://localhost:12013/health"),
     "Whisper": os.getenv("WHISPER_URL", "http://localhost:12003/health"),
     "Piper": os.getenv("PIPER_URL", "http://localhost:12004/"),
     "Retriever": os.getenv("RETRIEVER_URL", "http://localhost:12007/documents"),
@@ -38,7 +40,8 @@ def check_service(name: str, url: str) -> bool:
     """
     print(f"Checking {Colors.YELLOW}{name:<15}{Colors.NC}...", end="", flush=True)
     try:
-        response = requests.get(url, timeout=5)
+        # Increased timeout for services that might be slow to start (like vLLM)
+        response = requests.get(url, timeout=20)
         if 200 <= response.status_code < 400:
             print(
                 f"[ {Colors.GREEN}OK{Colors.NC} ] - Responded with status {Colors.GREEN}{response.status_code}{Colors.NC}"
@@ -68,7 +71,7 @@ def main():
 
     print("---------------------------")
     if all_ok:
-        print(f"{Colors.GREEN}All BEND services are responsive.{Colors.NC}")
+        print(f"{Colors.GREEN}All key BEND services are responsive.{Colors.NC}")
         sys.exit(0)
     else:
         print(f"{Colors.RED}One or more BEND services are not healthy.{Colors.NC}")

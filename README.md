@@ -1,8 +1,9 @@
 # BEND
 **Backend Enhanced Neural Dispatch**
 
-BEND is a locally-hosted, containerized intelligence stack built to run high-performance LLMs, whispering STT, cloned TTS, and full RAG pipelines.
-It’s for when you want a fast, self-sufficient brainstem that does more than just answer questions—it listens, speaks, remembers, and swaps personalities on command.
+BEND is a locally-hosted, containerized backend stack designed to give your AI applications a solid foundation. It bundles together high-performance services for language models, document retrieval (RAG), voice, and more.
+
+Think of it as a ready-to-run power source for your AI projects, letting you focus on building your application instead of managing infrastructure.
 
 > It's like ChatGPT moved into your server closet and brought a filing cabinet.
 
@@ -10,16 +11,15 @@ It’s for when you want a fast, self-sufficient brainstem that does more than j
 
 ## 🚀 Features
 
-- **KoboldCPP** backend (GGUF & EXL2 models)
-- **Dynamic Hot-Swapping** of LLMs with zero downtime
-- **Speech-to-text** via Whisper
-- **Text-to-speech** via Piper
-- **Unified voice proxy API** (`/speak`, `/transcribe`)
-- **Document RAG system** (Ingest `.pdf`, `.docx`, `.pptx`, `.txt`, `.md`)
-- **OpenWebUI** frontend
-- **Fully Dockerized** and rebuildable from scratch
-- **Deep Observability** via structured JSON logging and OpenTelemetry tracing
-- **Optional NVIDIA GPU Acceleration** for `koboldcpp`, `whisper`, and `retriever`.
+- **High-Performance LLM Serving:** Comes with vLLM for top-tier speed and KoboldCPP for broad model compatibility.
+- **Full Observability:** Includes LangFuse to give you a clear, visual trace of your AI's thoughts and actions.
+- **Safety Ready:** An optional NeMo Guardrails service is included to help you build safer agents.
+- **Agent Memory:** A built-in Redis service provides a fast and reliable key-value store for long-term agent memory.
+- **Document Retrieval (RAG):** A complete RAG pipeline with Qdrant lets your applications pull information from your own documents.
+- **Voice Capabilities:** Includes Whisper for speech-to-text and Piper for text-to-speech, all accessible through a single API.
+- **Web UI Included:** Comes with OpenWebUI for chatting directly with your models.
+- **Fully Dockerized:** The entire stack is managed with Docker Compose, making setup and teardown simple.
+- **GPU Accelerated:** Provides optional NVIDIA GPU support for all the key services.
 
 ---
 
@@ -31,16 +31,16 @@ BEND is a fully independent backend stack. All management is handled via the `sc
 
 - Docker and Docker Compose
 - `yq` (e.g., `brew install yq`)
-- A downloaded GGUF model file.
+- A downloaded GGUF or Hugging Face model file.
 - For GPU support: NVIDIA GPU with drivers and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed.
 
 ### 2. Setup
 
 ```bash
-# Place your downloaded .gguf file inside the models/ directory
-mv ~/Downloads/Nous-Hermes-2-Mixtral-8x7B.Q5_K_M.gguf ./models/
+# Place your downloaded model files inside the models/ directory.
+# This directory is mounted into both vLLM and KoboldCPP.
 
-# Select the model to use. This creates the .env file needed to start.
+# Create the .env file needed to start.
 ./scripts/switch-model.sh hermes
 ```
 > **Note on Gated Models:** To download models that require authentication from Hugging Face, edit the newly created `.env` file and add your Hugging Face Read Token to the `HF_TOKEN` variable. This token will be used by the `airgap-bundle` command.
@@ -51,64 +51,49 @@ mv ~/Downloads/Nous-Hermes-2-Mixtral-8x7B.Q5_K_M.gguf ./models/
 - **Start BEND (NVIDIA GPU):** `./scripts/manage.sh up --gpu`
 - **Stop BEND:** `./scripts/manage.sh down`
 - **Check Status:** `./scripts/manage.sh status`
-- **View Logs:** `./scripts/manage.sh logs` or `./scripts/manage.sh logs koboldcpp`
+- **View Logs:** `./scripts/manage.sh logs` or `./scripts/manage.sh logs vllm`
 - **Switch LLM:** `./scripts/manage.sh switch mythomax`
-
-#### GPU Configuration
-After running `switch-model.sh`, you can edit the `.env` file to control how many layers are offloaded to the GPU:
-- `KOBOLD_GPU_LAYERS=99` (A high number means "offload as many as possible")
-- `WHISPER_GPU_LAYERS=99`
 
 ---
 
 ## 📁 Project Structure
 
-```
-bend/
+```bend/
 ├── models.yaml              # Canonical model registry
 ├── docker-compose.yml       # All services, one file
 ├── .env                     # Auto-generated model link
 ├── scripts/                 # Utility & Management scripts
-│   ├── manage.sh
-│   ├── switch-model.sh
-│   └── healthcheck.sh
-├── models/                  # GGUF + EXL2 model files
+├── guardrails/              # NeMo Guardrails configuration
+├── models/                  # GGUF + HF model files
 ├── rag/                     # RAG API + vector database
-└── voice-proxy/             # Voice API proxy```
+└── voice-proxy/             # Voice API proxy
+```
 
 ---
 
 ## 🎯 Ports
 
-| Port   | Service      |
-|--------|--------------|
-| 12002  | OpenWebUI    |
-| 12003  | Whisper STT  |
-| 12004  | Piper TTS    |
-| 12005  | Glances      |
-| 12006  | Qdrant (RAG) |
-| 12007  | Retriever API|
-| 12008  | Voice Proxy  |
-| 12009  | KoboldCPP    |
+| Port   | Service          |
+|--------|------------------|
+| 12002  | OpenWebUI        |
+| 12003  | Whisper STT      |
+| 12004  | Piper TTS        |
+| 12005  | Glances          |
+| 12006  | Qdrant (RAG)     |
+| 12007  | Retriever API    |
+| 12008  | Voice Proxy      |
+| 12009  | KoboldCPP        |
+| 12010  | Redis            |
+| 12011  | vLLM             |
+| 12012  | LangFuse         |
+| 12013  | NeMo Guardrails  |
 
 ---
 
 ## 💬 Philosophy
 
 BEND is designed to be:
-- **Modular** – swap pieces in/out
-- **Reproducible** – bootstrap cleanly, rebuild reliably
-- **Self-hosted** – no cloud, no SaaS, just horsepower
-- **Expandable** – perfect core for agent stacks like AEGIS
-
----
-
-## 🧪 Status
-
-BEND is stable and deployable. It is also:
-- Curious
-- Loud
-- Excellent at solving your problems and/or creating new ones
-
-> “You don’t build a backend like this for fun.
-> You build it because **you want the machine to talk back.**”
+- **Modular** – Swap pieces in and out as you need.
+- **Reproducible** – Rebuilds reliably from a clean state.
+- **Self-hosted** – Runs on your own hardware, with no cloud dependencies.
+- **Expandable** – Serves as a great foundation for agentic frameworks like AEGIS.

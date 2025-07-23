@@ -1,5 +1,4 @@
-#!/bin/bash
-
+# BEND/scripts/manage.sh
 # A simple management script for the BEND stack.
 # Use this to start, stop, and manage the backend services.
 
@@ -28,27 +27,14 @@ print_error() {
 }
 
 # --- Main Logic ---
-cd "$(dirname "$0")/.." # Ensure we are in the BEND root directory
+cd "$(dirname "$0")/.." || exit # Ensure we are in the BEND root directory
 
 COMMAND=$1
 shift || true # Shift arguments, allowing us to pass the rest to docker-compose
 
-# Load environment variables from .env file
+# Load environment variables from .env file if it exists
 if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
-fi
-
-# Determine which backend compose file to use based on the .env variable
-BACKEND_COMPOSE_FILE=""
-if [ "$BEND_LLM_BACKEND" == "ollama" ]; then
-    BACKEND_COMPOSE_FILE="-f docker-compose.ollama.yml"
-elif [ "$BEND_LLM_BACKEND" == "koboldcpp" ]; then
-    BACKEND_COMPOSE_FILE="-f docker-compose.koboldcpp.yml"
-elif [ "$BEND_LLM_BACKEND" == "exl2" ]; then
-    BACKEND_COMPOSE_FILE="-f docker-compose.exl2.yml"
-else
-    print_warn "BEND_LLM_BACKEND not set in .env. No LLM service will be started."
-    print_warn "Run './scripts/switch-backend.sh [koboldcpp|ollama|exl2]' to configure."
+  export "$(grep -v '^#' .env | xargs)"
 fi
 
 # Check for --gpu flag in the remaining arguments
@@ -59,8 +45,8 @@ if [[ " $@ " =~ " --gpu " ]]; then
   set -- "${@/--gpu/}"
 fi
 
-# Construct the base docker-compose command with all necessary files
-BASE_CMD="docker compose -f docker-compose.yml ${BACKEND_COMPOSE_FILE} ${GPU_FLAG}"
+# Construct the base docker-compose command.
+BASE_CMD="docker compose -f docker-compose.yml ${GPU_FLAG}"
 
 if [ -z "$COMMAND" ]; then
     print_error "No command specified."
@@ -70,7 +56,7 @@ fi
 
 case "$COMMAND" in
     up)
-        print_info "Starting BEND stack with backend: ${BEND_LLM_BACKEND:-none}"
+        print_info "Starting BEND stack..."
         $BASE_CMD up -d --remove-orphans "$@"
         print_success "BEND stack started. Use 'healthcheck' to verify services."
         ;;

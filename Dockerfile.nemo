@@ -1,0 +1,12 @@
+# BEND/Dockerfile.nemo
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir --break-system-packages "nemoguardrails[server]"
+
+COPY guardrails/config ./config
+
+EXPOSE 8000
+
+CMD ["nemoguardrails", "server", "--config=./config"]

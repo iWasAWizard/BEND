@@ -1,7 +1,6 @@
 # BEND/docker-compose.gpu.yml
 # GPU-specific overrides.
 # This file is only used when the --gpu flag is passed to manage.sh.
-version: "3.9"
 
 services:
   koboldcpp:
@@ -23,6 +22,15 @@ services:
               capabilities: [gpu]
 
   retriever:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  vllm:
     deploy:
       resources:
         reservations:

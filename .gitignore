@@ -54,7 +54,6 @@ rag-stack/docs/.gitkeep
 scratch.txt
 tmp/
 temp/
-ollama_data/
 
 # Binaries and modelfiles
 *.bin
