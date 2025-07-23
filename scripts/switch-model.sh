@@ -35,7 +35,7 @@ fi
 
 # Extract the required fields using yq
 MODEL_NAME=$(echo "$MODEL_DATA" | yq e '.name' -)
-KOBOLDCPP_MODEL_NAME=$(echo "$MODEL_DATA" | yq e '.backend_model_name' -)
+KOBOLDCPP_MODEL_NAME=$(echo "$MODEL_DATA" | yq e '.koboldcpp_model_name' -)
 CONTEXT_SIZE=$(echo "$MODEL_DATA" | yq e '.default_max_context_length' -)
 
 echo -e "${BLUE}Switching to model: ${YELLOW}$MODEL_NAME${NC}"
