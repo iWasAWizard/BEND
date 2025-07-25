@@ -25,14 +25,14 @@ show_help() {
   echo "Options:"
   echo "  --gpu         Enable GPU acceleration."
   echo "  --lite        Use the lite configuration. Can be followed by an optional profile."
-  echo "  <profile>     Optional after --lite. Choose 'vllm', 'koboldcpp', or leave blank for both."
+  echo "  <profile>     Optional after --lite. Choose 'vllm' or 'ollama', or leave blank for both."
   echo "  [service]     Optionally specify a single service to target."
   echo ""
   echo "Examples:"
   echo "  ./scripts/manage.sh up --gpu                       # Start full stack with GPU"
   echo "  ./scripts/manage.sh up --lite vllm --gpu           # Start lite stack with vLLM on GPU"
-  echo "  ./scripts/manage.sh up --lite koboldcpp            # Start lite stack with KoboldCPP on CPU"
-  echo "  ./scripts/manage.sh up --lite                      # Start lite stack with BOTH vLLM and KoboldCPP"
+  echo "  ./scripts/manage.sh up --lite ollama               # Start lite stack with Ollama on CPU"
+  echo "  ./scripts/manage.sh up --lite                      # Start lite stack with BOTH vLLM and Ollama"
   echo "  ./scripts/manage.sh logs vllm                      # Tail logs for just the vllm service"
 }
 
@@ -52,13 +52,13 @@ while [[ $# -gt 0 ]]; do
     --lite)
       LITE_MODE=true
       # Check if the next argument is a valid profile, but don't require it.
-      if [[ -n "$2" && ("$2" == "vllm" || "$2" == "koboldcpp") ]]; then
+      if [[ -n "$2" && ("$2" == "vllm" || "$2" == "ollama") ]]; then
         LITE_PROFILE_ARGS="--profile $2"
         echo "💡 Lite mode enabled with profile: $2"
         shift 2
       else
-        echo "💡 Lite mode enabled with all profiles (vllm & koboldcpp)."
-        LITE_PROFILE_ARGS="--profile vllm --profile koboldcpp"
+        echo "💡 Lite mode enabled with all profiles (vllm & ollama)."
+        LITE_PROFILE_ARGS="--profile vllm --profile ollama"
         shift
       fi
       ;;
@@ -95,7 +95,8 @@ else
     COMPOSE_CMD="$COMPOSE_CMD -f docker-compose.yml"
 fi
 
-if [ "$GPU_FLAG" == "--gpu" ]; then
+if [ "$GPU_FLAG" == "--gpu" ];
+then
     COMPOSE_CMD="$COMPOSE_CMD -f docker-compose.gpu.yml"
     echo "✅ GPU acceleration enabled."
     # Set build-time arguments for services that need them

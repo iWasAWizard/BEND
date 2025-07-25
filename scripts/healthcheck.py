@@ -22,7 +22,7 @@ class Colors:
 # URLs are configured to be called from the host machine, matching docker-compose ports.
 SERVICES = {
     "vLLM": os.getenv("VLLM_URL", "http://localhost:12011/health"),
-    "Guardrails": os.getenv("GUARDRAILS_URL", "http://localhost:12013/health"),
+    "Guardrails": os.getenv("GUARDRAILS_URL", "http://localhost:12012/health"),
     "Whisper": os.getenv("WHISPER_URL", "http://localhost:12003/health"),
     "Piper": os.getenv("PIPER_URL", "http://localhost:12004/"),
     "Retriever": os.getenv("RETRIEVER_URL", "http://localhost:12007/documents"),

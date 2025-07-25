@@ -122,7 +122,7 @@ All stack management is handled by the `manage.sh` script:
 | 12009  | KoboldCPP        |
 | 12010  | Redis            |
 | 12011  | vLLM             |
-| 12013  | NeMo Guardrails  |
+| 12012  | NeMo Guardrails  |
 
 ## 🤝 Connecting with AEGIS
 

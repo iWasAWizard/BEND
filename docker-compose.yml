@@ -1,4 +1,5 @@
 # BEND/docker-compose.yml
+
 networks:
   bend-net:
     driver: bridge
@@ -11,7 +12,7 @@ services:
     ports:
       - "${OPENWEBUI_PORT:-12002}:3000"
     environment:
-      - OLLM_API_BASE_URL=${OLLM_API_BASE_URL}
+      - OLLM_API_BASE_URL=http://ollama:11434/api
       - WEBUI_URL=http://localhost:12002
       - PORT=3000
       - ENABLE_PERSISTENT_CONFIG=true
@@ -19,6 +20,8 @@ services:
       - openwebui_data:/app/backend/data
     networks:
       - bend-net
+    depends_on:
+      - ollama
 
   whisper:
     build:
@@ -127,29 +130,14 @@ services:
     networks:
       - bend-net
 
-  koboldcpp:
-    build:
-      context: .
-      dockerfile: Dockerfile.build-services
-      target: kobold-builder
-      args:
-        - GPU_ENABLED=${KOBOLD_GPU_ENABLED:-false}
-    container_name: koboldcpp
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
     restart: unless-stopped
     ports:
-      - "${KOBOLD_PORT:-12009}:5001"
+      - "${OLLAMA_PORT:-12009}:11434"
     volumes:
-      - ./models:/models
-    command: >
-      python3 koboldcpp.py
-      --model /models/${KOBOLDCPP_MODEL_NAME}
-      --host 0.0.0.0
-      --port 5001
-      --threads ${KOBOLD_THREADS:-16}
-      --contextsize ${MODEL_CONTEXT_SIZE}
-      --gpulayers ${KOBOLD_GPU_LAYERS:-0}
-      --smartcontext
-      --usemlock
+      - ollama_data:/root/.ollama
     networks:
       - bend-net
 
@@ -163,7 +151,7 @@ services:
       - bend-net
 
   vllm:
-    image: openeuler/vllm-cpu:latest
+    image: vllm/vllm-openai:latest
     container_name: vllm
     restart: unless-stopped
     ports:
@@ -188,7 +176,7 @@ services:
     container_name: nemoguardrails
     restart: unless-stopped
     ports:
-      - "${GUARDRAILS_PORT:-12013}:8000"
+      - "${GUARDRAILS_PORT:-12012}:8000"
     networks:
       - bend-net
 
@@ -196,3 +184,4 @@ volumes:
   qdrant_data:
   openwebui_data:
   whisper_data:
+  ollama_data:

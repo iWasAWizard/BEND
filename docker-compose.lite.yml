@@ -3,8 +3,6 @@
 # for powering an autonomous agent like AEGIS.
 # Use with the --lite flag and a profile name, e.g., `manage.sh up --lite vllm`
 
-version: "3.9"
-
 networks:
   bend-net:
     driver: bridge
@@ -39,30 +37,15 @@ services:
     networks:
       - bend-net
 
-  koboldcpp:
-    profiles: ["koboldcpp"]
-    build:
-      context: .
-      dockerfile: Dockerfile.build-services
-      target: kobold-builder
-      args:
-        - GPU_ENABLED=${KOBOLD_GPU_ENABLED:-false}
-    container_name: koboldcpp
+  ollama:
+    profiles: ["ollama"]
+    image: ollama/ollama
+    container_name: ollama
     restart: unless-stopped
     ports:
-      - "${KOBOLD_PORT:-12009}:5001"
+      - "${OLLAMA_PORT:-12009}:11434"
     volumes:
-      - ./models:/models
-    command: >
-      python3 koboldcpp.py
-      --model /models/${KOBOLDCPP_MODEL_NAME}
-      --host 0.0.0.0
-      --port 5001
-      --threads ${KOBOLD_THREADS:-16}
-      --contextsize ${MODEL_CONTEXT_SIZE}
-      --gpulayers ${KOBOLD_GPU_LAYERS:-0}
-      --smartcontext
-      --usemlock
+      - ollama_data:/root/.ollama
     networks:
       - bend-net
 
@@ -77,7 +60,7 @@ services:
 
   vllm:
     profiles: ["vllm"]
-    image: openeuler/vllm-cpu:latest
+    image: vllm/vllm-openai:latest
     container_name: vllm
     restart: unless-stopped
     ports:
@@ -97,3 +80,4 @@ services:
 
 volumes:
   qdrant_data:
+  ollama_data:
