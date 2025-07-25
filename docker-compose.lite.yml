@@ -77,7 +77,7 @@ services:
 
   vllm:
     profiles: ["vllm"]
-    image: vllm/vllm-openai:latest
+    image: openeuler/vllm-cpu:latest
     container_name: vllm
     restart: unless-stopped
     ports:

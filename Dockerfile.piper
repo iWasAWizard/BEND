@@ -12,8 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 RUN python -m pip install --no-cache-dir --break-system-packages piper-tts[http]
 
-ARG PIPER_VOICE=${PIPER_VOICE}
-RUN python -m piper.download_voices ${PIPER_VOICE}
+RUN python -m piper.download_voices ${PIPER_VOICE_MODEL:-en_US-lessac-medium}
 
 # The URL for the Linux aarch64 (ARM64) binary release.
 # ENV PIPER_URL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz"
