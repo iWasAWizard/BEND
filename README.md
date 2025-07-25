@@ -26,21 +26,20 @@ BEND isn't a single application; it's a curated collection of services that work
 All services run in their own Docker containers and communicate over a private network called `bend_bend-net`. This makes the entire stack self-contained and portable.
 
 ```
-+-----------------------------------------------+
-| BEND Docker Environment (bend_bend-net)       |
-|                                               |
-|  +-----------+   +----------+   +----------+  |
-|  |   vLLM    |   |  Qdrant  |   |  Redis   |  |
-|  | (LLM API) |   | (RAG DB) |   | (Memory) |  |
-|  +-----------+   +----------+   +----------+  |
-|                                               |
-|  +-----------+   +----------+   +----------+  |
-|  | Guardrails|   |  Whisper |   |   Piper  |  |
-|  | (Safety)  |   |  (STT)   |   |   (TTS)  |  |
-|  +-----------+   +----------+   +----------+  |
-|                                               |
-+-----------------------------------------------+
-```
++-------------------------------------------------------------+
+| BEND Docker Environment (Network: bend_bend-net)            |
+|                                                             |
+|  +-----------+   +----------+   +----------+   +----------+  |
+|  |   vLLM    |   | Guardrails |   |  Qdrant  |   |  Redis   |  |
+|  | (LLM API) |   | (Safety)   |   | (RAG DB) |   | (Memory) |  |
+|  +-----------+   +----------+   +----------+   +----------+  |
+|                                                             |
+|  +-----------+   +----------+   +----------+                 |
+|  | KoboldCPP |   |  Whisper |   |   Piper  |                 |
+|  | (LLM API) |   |  (STT)   |   |   (TTS)  |                 |
+|  +-----------+   +----------+   +----------+                 |
+|                                                             |
++-------------------------------------------------------------+```
 
 ## 🚀 Quickstart
 
@@ -67,9 +66,9 @@ Next, you need to choose and configure a language model.
 ./scripts/list-models.sh
 
 # Download the GGUF files for a model (e.g., llama3)
-./scripts/download-model.sh llama3
+./scripts/download-gguf-model.sh llama3
 
-# Create the .env file and configure the stack to use the chosen model
+# Configure the stack to use the chosen model
 ./scripts/switch-model.sh llama3
 ```
 
@@ -96,7 +95,7 @@ Use the built-in healthcheck to make sure all services started correctly. It may
 ./scripts/manage.sh healthcheck
 ```
 
-Once all services show `[ OK ]`, you can explore the web interface for OpenWebUI (`http://localhost:12002`).
+Once all services show `[ OK ]`, you can explore the web interfaces for OpenWebUI (`http://localhost:12002`).
 
 ## ⚙️ Management
 
@@ -137,4 +136,3 @@ BEND is designed to be:
 -   **Reproducible:** Builds reliably from a clean state, every time.
 -   **Self-hosted:** Runs on your own hardware, with no cloud dependencies.
 -   **Expandable:** Serves as a great foundation for building your own AI-powered applications.
-```

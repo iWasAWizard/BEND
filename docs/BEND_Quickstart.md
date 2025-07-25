@@ -43,14 +43,14 @@ HF_TOKEN="hf_YourHuggingFaceTokenHere"
 The next step is to download the models you want to use. We have separate scripts for downloading full-repository models (for vLLM) and single-file GGUF models (for KoboldCPP).
 
 1.  **Download the vLLM Model:**
-    Use the `download-hf-model.sh` script with the Hugging Face repository ID. This will clone the entire model repository into the `models/` directory.
+    Use the `download-hf-model.sh` script with the Hugging Face repository ID.
     ```bash
     # Download the Llama 3 model repository
     ./scripts/download-hf-model.sh "meta-llama/Meta-Llama-3-8B-Instruct"
     ```
 
 2.  **Download the KoboldCPP Model:**
-    Use the `download-gguf-model.sh` script with the `key` from `models.yaml`. This downloads just the single `.gguf` file needed by KoboldCPP.
+    Use the `download-gguf-model.sh` script with the `key` from `models.yaml`.
     ```bash
     # Download the GGUF version of Llama 3
     ./scripts/download-gguf-model.sh llama3
@@ -63,22 +63,19 @@ Now that the files are downloaded, run the `switch-model.sh` script. This reads 
 ```bash
 ./scripts/switch-model.sh llama3
 ```
-This command ensures that when you start the stack, vLLM and KoboldCPP will load the model files you just downloaded.
 
 ## Step 4: Start the Stack
 
-You're now ready to launch the entire BEND stack. This command reads the `docker-compose.yml` file and your `.env` file to start all the services.
+You're now ready to launch the BEND stack. You can start the full stack or a lightweight, essential-only version.
 
--   **For CPU-only:**
-    ```bash
-    ./scripts/manage.sh up
-    ```
--   **For NVIDIA GPU acceleration:**
+-   **To start the FULL stack with GPU:**
     ```bash
     ./scripts/manage.sh up --gpu
     ```
-
-The first time you run this, it will build the custom Docker images and may take several minutes.
+-   **To start a LITE stack with only vLLM (and core services) on GPU:**
+    ```bash
+    ./scripts/manage.sh up --lite vllm --gpu
+    ```
 
 ## Step 5: Verify the Installation
 
@@ -96,14 +93,13 @@ Once the services are running, you can verify that everything started correctly.
 
 | Port | Service | What it's for |
 | :--- | :--- | :--- |
-| `http://localhost:12002` | OpenWebUI | A friendly chat interface to talk directly to your LLM. It's pre-configured to connect to the vLLM service. |
-| `http://localhost:12005` | Glances | A system monitoring dashboard to see the real-time CPU, GPU, and RAM usage of all the services. |
+| `http://localhost:12002` | OpenWebUI (Full Stack Only) | A friendly chat interface to talk directly to your LLM. |
+| `http://localhost:12015` | MinIO Console (Full Stack Only) | The web UI for the S3 blob storage. |
+| `http://localhost:12005` | Glances (Full Stack Only) | A system monitoring dashboard. |
 
 ## Next Steps
 
-You now have a complete, high-performance AI backend running locally! From here, you can start building your own applications against its APIs or proceed to the **AEGIS Quickstart Guide** to connect an autonomous agent to it.
-
-To stop the stack at any time, simply run:
+You now have a complete, high-performance AI backend running locally! To stop the stack at any time, simply run:
 ```bash
 ./scripts/manage.sh down
 ```

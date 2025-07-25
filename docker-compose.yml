@@ -164,7 +164,7 @@ services:
       - bend-net
 
   vllm:
-    profiles: ["koboldcpp"]
+    profiles: ["vllm"]
     image: openeuler/vllm-cpu:latest
     container_name: vllm
     restart: unless-stopped
