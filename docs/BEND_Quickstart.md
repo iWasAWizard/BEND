@@ -1,9 +1,3 @@
-Of course. You're right, adding more mass and detail to these key documents will make them much more valuable. Let's flesh them out, one at a time, starting with the **BEND Quickstart Guide**.
-
-I will expand each section to provide more context, explain the *why* behind the commands, and add a new section to give users a better mental model of what they're running. The tone will remain helpful and easygoing.
-
----
-
 # BEND Quickstart Guide (Standalone)
 
 Welcome! This guide will help you get the BEND intelligence stack up and running on its own. BEND is designed to be a self-contained "brainstem" for your AI applications, providing all the core services you need in one easy-to-manage package.
@@ -30,45 +24,47 @@ Before you start, you'll need to have a few things installed on your machine:
 -   **`yq`:** A command-line YAML processor. You can usually install it with a package manager (e.g., `brew install yq` or `apt-get install yq`).
 -   **(Optional) NVIDIA GPU:** If you want GPU acceleration, you'll need an NVIDIA graphics card with the appropriate drivers and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed.
 
-## Step 1: Get the Code
+## Step 1: Get the Code & Configure Authentication
 
-First, clone the BEND repository to your local machine and navigate into the directory.
+First, clone the BEND repository and create your environment file.
 
 ```bash
 git clone https://github.com/your-username/BEND.git
 cd BEND
+cp .env.example .env
+```
+Now, open the new `.env` file with a text editor. **If you plan to use gated models like Llama 3, you must add your Hugging Face token here.**
+```dotenv
+# BEND/.env
+HF_TOKEN="hf_YourHuggingFaceTokenHere"
 ```
 
-## Step 2: Choose and Download a Model
+## Step 2: Download Your Models
 
-BEND needs to know which language model you want to run. The available models are defined in `models.yaml`.
+The next step is to download the models you want to use. We have separate scripts for downloading full-repository models (for vLLM) and single-file GGUF models (for KoboldCPP).
 
-1.  **List Available Models:**
-    You can see a list of pre-configured models and their use cases by running:
+1.  **Download the vLLM Model:**
+    Use the `download-hf-model.sh` script with the Hugging Face repository ID. This will clone the entire model repository into the `models/` directory.
     ```bash
-    ./scripts/list-models.sh
+    # Download the Llama 3 model repository
+    ./scripts/download-hf-model.sh "meta-llama/Meta-Llama-3-8B-Instruct"
     ```
 
-2.  **Download the GGUF Model Files:**
-    While vLLM will automatically download models from Hugging Face, the KoboldCPP service needs a local GGUF file. It's best to download the one you plan to use. The script makes this easy. For example, to download the `llama3` model:
+2.  **Download the KoboldCPP Model:**
+    Use the `download-gguf-model.sh` script with the `key` from `models.yaml`. This downloads just the single `.gguf` file needed by KoboldCPP.
     ```bash
-    ./scripts/download-model.sh llama3
+    # Download the GGUF version of Llama 3
+    ./scripts/download-gguf-model.sh llama3
     ```
-    This will download the correct `.gguf` file and place it in the `models/` directory, making it available to the KoboldCPP container.
 
-## Step 3: Configure Your Environment
+## Step 3: Configure the Stack to Use Your Model
 
-The `switch-model.sh` script is the main way to configure your stack. It intelligently creates or edits a `.env` file with the correct settings for the model you choose. This file is the central source of truth for the Docker Compose setup.
-
-To configure the stack to use the `llama3` model you just downloaded, run:
+Now that the files are downloaded, run the `switch-model.sh` script. This reads `models.yaml` and sets the correct model names and parameters in your `.env` file for all services.
 
 ```bash
 ./scripts/switch-model.sh llama3
 ```
-
-This command sets the `MODEL_NAME` (for vLLM) and `KOBOLDCPP_MODEL_NAME` (for KoboldCPP) variables in the `.env` file. If the `.env` file already exists, this script will safely update these values while preserving any other keys you may have added (like API keys).
-
-**Pro Tip:** If you need to download a gated model from Hugging Face, you can add your token to the `.env` file like this: `HF_TOKEN=hf_...`. The vLLM service will automatically use it.
+This command ensures that when you start the stack, vLLM and KoboldCPP will load the model files you just downloaded.
 
 ## Step 4: Start the Stack
 
@@ -77,12 +73,13 @@ You're now ready to launch the entire BEND stack. This command reads the `docker
 -   **For CPU-only:**
     ```bash
     ./scripts/manage.sh up
-    ```-   **For NVIDIA GPU acceleration:**
+    ```
+-   **For NVIDIA GPU acceleration:**
     ```bash
     ./scripts/manage.sh up --gpu
     ```
 
-The first time you run this, it will build the custom Docker images and may take several minutes. Subsequent starts will be much faster.
+The first time you run this, it will build the custom Docker images and may take several minutes.
 
 ## Step 5: Verify the Installation
 
@@ -93,7 +90,7 @@ Once the services are running, you can verify that everything started correctly.
     ```bash
     ./scripts/manage.sh healthcheck
     ```
-    You should see a list of services with a green `[ OK ]` status next to each one. vLLM can sometimes take a minute or two to download its model and become healthy, so if it fails at first, wait a moment and try again.
+    You should see a list of services with a green `[ OK ]` status next to each one.
 
 2.  **Explore the Web UIs:**
     BEND comes with several web interfaces that you can access in your browser:
@@ -103,46 +100,6 @@ Once the services are running, you can verify that everything started correctly.
 | `http://localhost:12002` | OpenWebUI | A friendly chat interface to talk directly to your LLM. It's pre-configured to connect to the vLLM service. |
 | `http://localhost:12012` | LangFuse | The observability platform. After you run an agent, this is where you'll see a detailed, visual trace of its activity. |
 | `http://localhost:12005` | Glances | A system monitoring dashboard to see the real-time CPU, GPU, and RAM usage of all the services. |
-
-## Step 6: Interact with the API
-
-Your BEND stack is now running and ready to receive API calls. Here are a couple of examples using `curl` to show how you can interact with the key services directly.
-
-**1. Get a Chat Completion from vLLM (Primary Engine):**
-This command sends a prompt to the vLLM service using its OpenAI-compatible endpoint.
-
-```bash
-curl http://localhost:12011/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "aegis-agent-model",
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "What is the capital of France?"}
-    ]
-  }'
-```
-
-**2. Ingest and Retrieve from the RAG Service:**
-First, ingest a simple text file into the RAG system.
-
-```bash
-# Create a dummy file
-echo "The secret code for Project Chimera is Crimson-Echo." > ./rag/docs/secret.txt
-
-# Ingest the file
-curl -X POST -F "file=@./rag/docs/secret.txt" http://localhost:12007/ingest
-```
-
-Now, ask a question and retrieve the information.
-
-```bash
-curl http://localhost:12007/retrieve \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "What is the code for Project Chimera?"
-  }'
-```
 
 ## Next Steps
 

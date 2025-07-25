@@ -1,70 +1,104 @@
-# BEND/scripts/switch-model.sh
 #!/bin/bash
-# A script to switch the active LLM by updating the .env file.
-# It reads model metadata from models.yaml using yq.
+# switch-model.sh - A smart script to configure BEND for a specific model.
 
-# --- Colors ---
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# It can be used in two ways:
+# 1. By KEY: ./scripts/switch-model.sh llama3
+#    - Looks up the key 'llama3' in models.yaml.
+#    - Configures both vLLM and KoboldCPP with the values from the manifest.
+#    - TRIGGERS THE DOWNLOAD of the GGUF model if not present.
+#
+# 2. By Hugging Face REPO_ID: ./scripts/switch-model.sh "mistralai/Mistral-7B-Instruct-v0.2"
+#    - Treats the argument as a repo ID.
+#    - Configures vLLM to use this model directly.
+#    - TRIGGERS THE DOWNLOAD of the full HF repository if not present.
+#    - Disables KoboldCPP for this run (as the GGUF is unknown) and warns the user.
 
-# --- Main Logic ---
-cd "$(dirname "$0")/.." || exit # Ensure we are in the BEND root directory
+set -e
+BEND_ROOT=$(git rev-parse --show-toplevel)
+cd "$BEND_ROOT"
 
-if [ -z "$1" ]; then
-    echo -e "${RED}ERROR: No model key provided.${NC}"
-    echo "Usage: $0 <model_key>"
-    echo "Example: $0 hermes"
-    echo -e "\nAvailable model keys from models.yaml:"
-    yq e '.models[].key' models.yaml
-    exit 1
-fi
-
-MODEL_KEY=$1
+MODEL_KEY_OR_REPO_ID=$1
+MODELS_FILE="models.yaml"
 ENV_FILE=".env"
 
-# Use yq to find the model entry by its key and extract its properties
-MODEL_DATA=$(yq e ".models[] | select(.key == \"$MODEL_KEY\")" models.yaml)
-
-if [ -z "$MODEL_DATA" ]; then
-    echo -e "${RED}ERROR: Model key '$MODEL_KEY' not found in models.yaml.${NC}"
-    exit 1
+if [ -z "$MODEL_KEY_OR_REPO_ID" ]; then
+  echo "Usage: $0 <model_key_from_models_yaml | hugging_face_repo_id>"
+  exit 1
 fi
 
-# Extract the required fields using yq
-MODEL_NAME=$(echo "$MODEL_DATA" | yq e '.name' -)
-KOBOLDCPP_MODEL_NAME=$(echo "$MODEL_DATA" | yq e '.koboldcpp_model_name' -)
-CONTEXT_SIZE=$(echo "$MODEL_DATA" | yq e '.default_max_context_length' -)
-
-echo -e "${BLUE}Switching to model: ${YELLOW}$MODEL_NAME${NC}"
-
-# --- Non-destructive .env update ---
-touch "$ENV_FILE" # Create the file if it doesn't exist
-
-update_or_add_line() {
-    local key="$1"
-    local value="$2"
-    local file="$3"
-    if grep -q "^${key}=" "$file"; then
-        # Key exists, so we update it. Using a temp file for sed is safer.
-        sed -i.bak "s|^${key}=.*|${key}=${value}|" "$file"
-        rm "${file}.bak"
-    else
-        # Key does not exist, so we append it.
-        echo "${key}=${value}" >> "$file"
-    fi
+# Function to update or add a key-value pair in the .env file
+update_env() {
+  local key=$1
+  local value=$2
+  # If the key exists, update it. Otherwise, add it.
+  if grep -q "^${key}=" "$ENV_FILE"; then
+    sed -i.bak "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+  else
+    echo "${key}=${value}" >> "$ENV_FILE"
+  fi
+  rm -f "${ENV_FILE}.bak"
 }
 
-update_or_add_line "MODEL_NAME" "$MODEL_NAME" "$ENV_FILE"
-update_or_add_line "KOBOLDCPP_MODEL_NAME" "$KOBOLDCPP_MODEL_NAME" "$ENV_FILE"
-update_or_add_line "MODEL_CONTEXT_SIZE" "$CONTEXT_SIZE" "$ENV_FILE"
-update_or_add_line "VLLM_GPU_MEMORY_UTILIZATION" "0.90" "$ENV_FILE"
-update_or_add_line "KOBOLD_GPU_LAYERS" "50" "$ENV_FILE"
-update_or_add_line "WHISPER_GPU_LAYERS" "99" "$ENV_FILE"
-update_or_add_line "OLLM_API_BASE_URL" "http://vllm:8000/v1" "$ENV_FILE"
+# Ensure .env file exists
+touch "$ENV_FILE"
 
-echo -e "${GREEN}SUCCESS: .env file has been configured for '$MODEL_KEY'.${NC}"
-echo "User-defined variables in .env have been preserved."
-echo "You can now start the stack with './scripts/manage.sh up'"
+# Check if the input is a known key in models.yaml
+MODEL_ENTRY=$(yq ".models[] | select(.key == \"$MODEL_KEY_OR_REPO_ID\")" "$MODELS_FILE")
+
+if [ -n "$MODEL_ENTRY" ]; then
+  # --- Case 1: A known key was provided (from models.yaml) ---
+  echo "✅ Found key '$MODEL_KEY_OR_REPO_ID' in $MODELS_FILE. Configuring from manifest."
+
+  HF_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.name')
+  KOBOLDCPP_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.koboldcpp_model_name // ""')
+  CONTEXT_SIZE=$(echo "$MODEL_ENTRY" | yq -r '.default_max_context_length // 8192')
+
+  # Trigger GGUF download for KoboldCPP if defined
+  if [ -n "$KOBOLDCPP_MODEL_NAME" ] && [ "$KOBOLDCPP_MODEL_NAME" != "null" ]; then
+      echo "Attempting to download GGUF model for KoboldCPP: $KOBOLDCPP_MODEL_NAME"
+      # We must also trigger the full HF repo download for vLLM
+      ./scripts/download-hf-model.sh "$HF_MODEL_NAME" || true
+      ./scripts/download-gguf-model.sh "$MODEL_KEY_OR_REPO_ID" || true
+  else
+      echo "No KoboldCPP model defined for '$MODEL_KEY_OR_REPO_ID'. Triggering vLLM download only."
+      ./scripts/download-hf-model.sh "$HF_MODEL_NAME" || true
+  fi
+
+  update_env "MODEL_NAME" "$HF_MODEL_NAME"
+  update_env "KOBOLDCPP_MODEL_NAME" "$KOBOLDCPP_MODEL_NAME"
+  update_env "MODEL_CONTEXT_SIZE" "$CONTEXT_SIZE"
+  update_env "OLLM_API_BASE_URL" "http://vllm:8000/v1"
+
+  echo "----------------------------------------"
+  echo "Model configured successfully:"
+  echo "  vLLM Model:       $HF_MODEL_NAME"
+  echo "  KoboldCPP Model:  $KOBOLDCPP_MODEL_NAME"
+  echo "  Context Size:     $CONTEXT_SIZE"
+  echo "----------------------------------------"
+else
+  # --- Case 2: An unknown key or a raw Hugging Face repo ID was provided ---
+  echo "⚠️ Key '$MODEL_KEY_OR_REPO_ID' not found in $MODELS_FILE. Treating as a dynamic Hugging Face repo ID for vLLM."
+
+  HF_MODEL_NAME="$MODEL_KEY_OR_REPO_ID"
+  KOBOLDCPP_MODEL_NAME="" # Disable KoboldCPP for dynamic repo IDs
+  CONTEXT_SIZE="8192" # Use a safe default context size
+
+  # Trigger download of the full Hugging Face repository
+  echo "Attempting to download full Hugging Face repository: $HF_MODEL_NAME"
+  ./scripts/download-hf-model.sh "$HF_MODEL_NAME" || true # Allow failure (e.g., if HF_TOKEN is missing for gated model)
+
+  update_env "MODEL_NAME" "$HF_MODEL_NAME"
+  update_env "KOBOLDCPP_MODEL_NAME" "$KOBOLDCPP_MODEL_NAME"
+  update_env "MODEL_CONTEXT_SIZE" "$CONTEXT_SIZE"
+  update_env "OLLM_API_BASE_URL" "http://vllm:8000/v1"
+
+  echo "----------------------------------------"
+  echo "Model configured for dynamic loading:"
+  echo "  vLLM Model:       $HF_MODEL_NAME"
+  echo "  Context Size:     $CONTEXT_SIZE"
+  echo ""
+  echo "🔴 NOTE: KoboldCPP has been disabled for this model because the specific"
+  echo "   GGUF filename is unknown or not applicable. vLLM will use the directly"
+  echo "   downloaded Hugging Face repository model."
+  echo "----------------------------------------"
+fi

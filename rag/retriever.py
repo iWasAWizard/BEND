@@ -24,9 +24,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 # --- Logging Setup ---
 # Configure root logger for structured JSON logging
 logHandler = logging.StreamHandler(sys.stdout)
-formatter = json.JsonFormatter(
-    fmt="%(asctime)s %(name)s %(levelname)s %(message)s"
-)
+formatter = json.JsonFormatter(fmt="%(asctime)s %(name)s %(levelname)s %(message)s")
 logHandler.setFormatter(formatter)
 logging.basicConfig(handlers=[logHandler], level=logging.INFO)
 logging.getLogger("uvicorn.access").disabled = True  # Disable default access logs

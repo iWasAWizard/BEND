@@ -65,5 +65,5 @@ models:
     default_max_context_length: 8192
     quant_example: "Q4_K_M"
     use_case: "Code generation and instruction following"
-    url: "https://huggingface.co/TheBloke/granite-3.3-8B-instruct-GGUF/resolve/main/granite-3.3-8b-instruct.Q4_K_M.gguf"
+    url: "https://huggingface.co/ibm-granite/granite-3.3-8b-instruct-GGUF/resolve/main/granite-3.3-8b-instruct-Q4_K_M.gguf"
     notes: "A strong, modern coding model from IBM."

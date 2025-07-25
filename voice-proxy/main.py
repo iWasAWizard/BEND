@@ -9,9 +9,7 @@ from pythonjsonlogger import json
 
 # --- Logging Setup ---
 logHandler = logging.StreamHandler(sys.stdout)
-formatter = json.JsonFormatter(
-    fmt="%(asctime)s %(name)s %(levelname)s %(message)s"
-)
+formatter = json.JsonFormatter(fmt="%(asctime)s %(name)s %(levelname)s %(message)s")
 logHandler.setFormatter(formatter)
 logging.basicConfig(handlers=[logHandler], level=logging.INFO)
 logging.getLogger("uvicorn.access").disabled = True

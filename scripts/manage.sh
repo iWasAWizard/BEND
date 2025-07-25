@@ -1,100 +1,145 @@
-# BEND/scripts/manage.sh
-# A simple management script for the BEND stack.
-# Use this to start, stop, and manage the backend services.
+#!/bin/bash
+# manage.sh - A unified management script for the BEND stack.
 
-# --- Colors ---
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+set -e
+BEND_ROOT=$(git rev-parse --show-toplevel)
+cd "$BEND_ROOT"
 
-# --- Helper Functions ---
-print_info() {
-    echo -e "${BLUE}INFO: $1${NC}"
-}
-
-print_success() {
-    echo -e "${GREEN}SUCCESS: $1${NC}"
-}
-
-print_warn() {
-    echo -e "${YELLOW}WARN: $1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}ERROR: $1${NC}"
-}
-
-# --- Main Logic ---
-cd "$(dirname "$0")/.." || exit # Ensure we are in the BEND root directory
-
+# --- Default Configuration ---
 COMMAND=$1
-shift || true # Shift arguments, allowing us to pass the rest to docker-compose
+shift # The rest of the arguments are now in $@
 
-# Load environment variables from .env file if it exists
-if [ -f .env ]; then
-  export "$(grep -v '^#' .env | xargs)"
-fi
+# --- Function to display help ---
+show_help() {
+  echo "Usage: ./scripts/manage.sh <command> [options] [service]"
+  echo ""
+  echo "Commands:"
+  echo "  up            Start services."
+  echo "  down          Stop all services."
+  echo "  restart       Restart services."
+  echo "  logs          Tail logs."
+  echo "  status        Show the status of running containers."
+  echo "  rebuild       Force a rebuild of all images without using cache."
+  echo "  healthcheck   Run a healthcheck on key services."
+  echo ""
+  echo "Options:"
+  echo "  --gpu         Enable GPU acceleration."
+  echo "  --lite        Use the lite configuration. Can be followed by an optional profile."
+  echo "  <profile>     Optional after --lite. Choose 'vllm', 'koboldcpp', or leave blank for both."
+  echo "  [service]     Optionally specify a single service to target."
+  echo ""
+  echo "Examples:"
+  echo "  ./scripts/manage.sh up --gpu                       # Start full stack with GPU"
+  echo "  ./scripts/manage.sh up --lite vllm --gpu           # Start lite stack with vLLM on GPU"
+  echo "  ./scripts/manage.sh up --lite koboldcpp            # Start lite stack with KoboldCPP on CPU"
+  echo "  ./scripts/manage.sh up --lite                      # Start lite stack with BOTH vLLM and KoboldCPP"
+  echo "  ./scripts/manage.sh logs vllm                      # Tail logs for just the vllm service"
+}
 
-# Check for --gpu flag in the remaining arguments
+# --- Argument Parsing ---
+LITE_MODE=false
+LITE_PROFILE_ARGS=""
+SERVICE=""
 GPU_FLAG=""
-if [[ " $@ " =~ " --gpu " ]]; then
-  GPU_FLAG="-f docker-compose.gpu.yml"
-  # This is a simple way to filter out the flag; a more robust script would parse args properly
-  set -- "${@/--gpu/}"
-fi
+TEMP_ARGS=() # Use an array to handle non-flag arguments robustly
 
-# Construct the base docker-compose command.
-BASE_CMD="docker compose -f docker-compose.yml ${GPU_FLAG}"
-
-if [ -z "$COMMAND" ]; then
-    print_error "No command specified."
-    echo "Usage: $0 {up|down|rebuild|logs|status|healthcheck} [--gpu] [docker-compose-args...]"
-    exit 1
-fi
-
-case "$COMMAND" in
-    up)
-        print_info "Starting BEND stack..."
-        $BASE_CMD up -d --remove-orphans "$@"
-        print_success "BEND stack started. Use 'healthcheck' to verify services."
-        ;;
-
-    down)
-        print_info "Stopping BEND stack..."
-        $BASE_CMD down "$@"
-        print_success "BEND stack stopped."
-        ;;
-
-    rebuild)
-        print_info "Force rebuilding BEND services..."
-        $BASE_CMD build --no-cache "$@"
-        print_success "Rebuild complete. Use 'up' to start."
-        ;;
-
-    logs)
-        print_info "Tailing logs... (Ctrl+C to exit)"
-        $BASE_CMD logs -f "$@"
-        ;;
-
-    status)
-        print_info "--- BEND Stack Status ---"
-        $BASE_CMD ps "$@"
-        ;;
-
-    healthcheck)
-        print_info "Performing healthcheck..."
-        if [ ! -f "scripts/healthcheck.py" ]; then
-            print_error "Healthcheck script not found at scripts/healthcheck.py"
-            exit 1
-        fi
-        python3 scripts/healthcheck.py
-        ;;
-
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --gpu)
+      GPU_FLAG="--gpu"
+      shift
+      ;;
+    --lite)
+      LITE_MODE=true
+      # Check if the next argument is a valid profile, but don't require it.
+      if [[ -n "$2" && ("$2" == "vllm" || "$2" == "koboldcpp") ]]; then
+        LITE_PROFILE_ARGS="--profile $2"
+        echo "💡 Lite mode enabled with profile: $2"
+        shift 2
+      else
+        echo "💡 Lite mode enabled with all profiles (vllm & koboldcpp)."
+        LITE_PROFILE_ARGS="--profile vllm --profile koboldcpp"
+        shift
+      fi
+      ;;
+    -h|--help)
+      show_help
+      exit 0
+      ;;
     *)
-        print_error "Unknown command: '$COMMAND'"
-        echo "Usage: $0 {up|down|rebuild|logs|status|healthcheck} [--gpu] [docker-compose-args...]"
-        exit 1
-        ;;
+      # Collect non-flag arguments (should only be the service name)
+      TEMP_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# Process any remaining non-flag arguments
+if [ ${#TEMP_ARGS[@]} -gt 1 ]; then
+    echo "Error: Multiple services specified or unknown arguments: ${TEMP_ARGS[*]}"
+    show_help
+    exit 1
+elif [ ${#TEMP_ARGS[@]} -eq 1 ]; then
+    SERVICE=${TEMP_ARGS[0]}
+fi
+
+# --- Build the docker-compose command string ---
+COMPOSE_CMD="docker compose"
+
+if [ "$LITE_MODE" == "true" ]; then
+    COMPOSE_CMD="$COMPOSE_CMD -f docker-compose.lite.yml"
+    if [ -n "$LITE_PROFILE_ARGS" ]; then
+        COMPOSE_CMD="$COMPOSE_CMD $LITE_PROFILE_ARGS"
+    fi
+else
+    COMPOSE_CMD="$COMPOSE_CMD -f docker-compose.yml"
+fi
+
+if [ "$GPU_FLAG" == "--gpu" ]; then
+    COMPOSE_CMD="$COMPOSE_CMD -f docker-compose.gpu.yml"
+    echo "✅ GPU acceleration enabled."
+    # Set build-time arguments for services that need them
+    export KOBOLD_GPU_ENABLED=true
+    export WHISPER_GPU_ENABLED=true
+else
+    export KOBOLD_GPU_ENABLED=false
+    export WHISPER_GPU_ENABLED=false
+fi
+
+
+# --- Command Execution ---
+case "$COMMAND" in
+  up)
+    echo "Starting BEND services..."
+    $COMPOSE_CMD up -d --remove-orphans $SERVICE
+    ;;
+  down)
+    echo "Stopping BEND services..."
+    # The 'down' command should be aware of all possible configurations to ensure it stops everything.
+    docker compose -f docker-compose.yml -f docker-compose.lite.yml down --remove-orphans $SERVICE
+    ;;
+  restart)
+    echo "Restarting BEND services..."
+    $COMPOSE_CMD restart $SERVICE
+    ;;
+  logs)
+    echo "Tailing logs..."
+    $COMPOSE_CMD logs -f $SERVICE
+    ;;
+  status)
+    echo "Checking status..."
+    $COMPOSE_CMD ps $SERVICE
+    ;;
+  rebuild)
+    echo "Rebuilding all images..."
+    $COMPOSE_CMD build --no-cache $SERVICE
+    ;;
+  healthcheck)
+    ./scripts/healthcheck.py
+    ;;
+  *)
+    echo "Error: Unknown command '$COMMAND'"
+    show_help
+    exit 1
+    ;;
 esac
