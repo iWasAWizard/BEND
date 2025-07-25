@@ -1,5 +1,5 @@
-# BEND/scripts/healthcheck.py
 #!/usr/bin/env python3
+# BEND/scripts/healthcheck.py
 """
 A simple healthcheck script for the BEND stack.
 Curls the primary endpoints of each service to verify they are responsive.
@@ -22,7 +22,6 @@ class Colors:
 # URLs are configured to be called from the host machine, matching docker-compose ports.
 SERVICES = {
     "vLLM": os.getenv("VLLM_URL", "http://localhost:12011/health"),
-    "LangFuse": os.getenv("LANGFUSE_URL", "http://localhost:12012/api/public/health"),
     "Guardrails": os.getenv("GUARDRAILS_URL", "http://localhost:12013/health"),
     "Whisper": os.getenv("WHISPER_URL", "http://localhost:12003/health"),
     "Piper": os.getenv("PIPER_URL", "http://localhost:12004/"),

@@ -9,7 +9,6 @@ By the end of this guide, you will have a complete, high-performance AI backend 
 BEND isn't a single application; it's a curated collection of powerful, open-source services that work together. Understanding what each piece does will help you get the most out of the stack:
 
 -   **vLLM (The Engine):** This is the high-performance server that runs your main language models. It's incredibly fast and efficient, especially on a GPU.
--   **LangFuse (The Flight Recorder):** An observability platform that gives you a beautiful web UI to trace every thought and action your AI takes. It's essential for debugging.
 -   **Qdrant (The Library):** A professional-grade vector database. This is the heart of the RAG system, where the knowledge from your documents is stored and searched.
 -   **Redis (The Notebook):** A fast, in-memory database that provides a simple key-value store. This is used by agents to save and recall specific facts, giving them a persistent memory.
 -   **Whisper & Piper (The Ears & Voice):** These services handle speech-to-text and text-to-speech, allowing your applications to listen and speak.
@@ -98,7 +97,6 @@ Once the services are running, you can verify that everything started correctly.
 | Port | Service | What it's for |
 | :--- | :--- | :--- |
 | `http://localhost:12002` | OpenWebUI | A friendly chat interface to talk directly to your LLM. It's pre-configured to connect to the vLLM service. |
-| `http://localhost:12012` | LangFuse | The observability platform. After you run an agent, this is where you'll see a detailed, visual trace of its activity. |
 | `http://localhost:12005` | Glances | A system monitoring dashboard to see the real-time CPU, GPU, and RAM usage of all the services. |
 
 ## Next Steps

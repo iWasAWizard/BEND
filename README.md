@@ -15,7 +15,6 @@ Think of it as a ready-to-run "AI power source" for your projects, letting you f
 BEND isn't a single application; it's a curated collection of services that work together seamlessly. Here’s a quick look at the key components and the role each one plays:
 
 -   **vLLM (The Engine):** This is the high-performance server that runs your main language models. It's incredibly fast and efficient, especially on a GPU, and serves models through an OpenAI-compatible API.
--   **LangFuse (The Flight Recorder):** An observability platform that gives you a beautiful web UI to trace every thought and action your AI takes. It's essential for debugging and understanding how your agents are making decisions.
 -   **Qdrant (The Library):** A professional-grade vector database. This is the heart of the RAG system, where the knowledge from your documents is stored, indexed, and made searchable.
 -   **Redis (The Notebook):** A fast, in-memory database that provides a simple key-value store. This is used by agents to save and recall specific facts, giving them a persistent long-term memory.
 -   **NeMo Guardrails (The Safety Inspector):** A security layer that can inspect an agent's proposed actions and block them if they violate pre-defined safety rules, preventing dangerous or unintended behavior.
@@ -27,20 +26,20 @@ BEND isn't a single application; it's a curated collection of services that work
 All services run in their own Docker containers and communicate over a private network called `bend_bend-net`. This makes the entire stack self-contained and portable.
 
 ```
-+-------------------------------------------------------------+
-| BEND Docker Environment (Network: bend_bend-net)            |
-|                                                             |
-|  +-----------+   +----------+   +----------+   +----------+  |
-|  |   vLLM    |   | LangFuse |   |  Qdrant  |   |  Redis   |  |
-|  | (LLM API) |   | (Traces) |   | (RAG DB) |   | (Memory) |  |
-|  +-----------+   +----------+   +----------+   +----------+  |
-|                                                             |
-|  +-----------+   +----------+   +----------+                 |
-|  | Guardrails|   |  Whisper |   |   Piper  |                 |
-|  | (Safety)  |   |  (STT)   |   |   (TTS)  |                 |
-|  +-----------+   +----------+   +----------+                 |
-|                                                             |
-+-------------------------------------------------------------+
++-----------------------------------------------+
+| BEND Docker Environment (bend_bend-net)       |
+|                                               |
+|  +-----------+   +----------+   +----------+  |
+|  |   vLLM    |   |  Qdrant  |   |  Redis   |  |
+|  | (LLM API) |   | (RAG DB) |   | (Memory) |  |
+|  +-----------+   +----------+   +----------+  |
+|                                               |
+|  +-----------+   +----------+   +----------+  |
+|  | Guardrails|   |  Whisper |   |   Piper  |  |
+|  | (Safety)  |   |  (STT)   |   |   (TTS)  |  |
+|  +-----------+   +----------+   +----------+  |
+|                                               |
++-----------------------------------------------+
 ```
 
 ## 🚀 Quickstart
@@ -97,7 +96,7 @@ Use the built-in healthcheck to make sure all services started correctly. It may
 ./scripts/manage.sh healthcheck
 ```
 
-Once all services show `[ OK ]`, you can explore the web interfaces for LangFuse (`http://localhost:12012`) and OpenWebUI (`http://localhost:12002`).
+Once all services show `[ OK ]`, you can explore the web interface for OpenWebUI (`http://localhost:12002`).
 
 ## ⚙️ Management
 
@@ -124,7 +123,6 @@ All stack management is handled by the `manage.sh` script:
 | 12009  | KoboldCPP        |
 | 12010  | Redis            |
 | 12011  | vLLM             |
-| 12012  | LangFuse         |
 | 12013  | NeMo Guardrails  |
 
 ## 🤝 Connecting with AEGIS

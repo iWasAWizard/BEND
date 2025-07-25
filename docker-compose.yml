@@ -128,6 +128,7 @@ services:
       - bend-net
 
   koboldcpp:
+    profiles: ["koboldcpp"]
     build:
       context: .
       dockerfile: Dockerfile.build-services
@@ -163,6 +164,7 @@ services:
       - bend-net
 
   vllm:
+    profiles: ["koboldcpp"]
     image: openeuler/vllm-cpu:latest
     container_name: vllm
     restart: unless-stopped
@@ -179,148 +181,6 @@ services:
     networks:
       - bend-net
 
-  langfuse-server:
-    image: langfuse/langfuse:latest
-    container_name: langfuse-server
-    restart: unless-stopped
-    depends_on:
-      langfuse-db:
-        condition: service_started
-      create-minio-bucket:
-        condition: service_completed_successfully
-      clickhouse:
-        condition: service_healthy
-    ports:
-      - "${LANGFUSE_PORT:-12012}:3000"
-    environment:
-      - HOSTNAME=0.0.0.0
-      - DATABASE_URL=postgresql://langfuse:langfuse@langfuse-db:5432
-      - CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
-      - CLICKHOUSE_URL=http://clickhouse:8123
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=langfuse
-      - CLICKHOUSE_DB=langfuse
-      - REDIS_CONNECTION_STRING=redis://redis:6379
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - SALT=${SALT}
-      - ENCRYPTION_KEY=${LANGFUSE_ENCRYPTION_KEY}
-      - CLICKHOUSE_REPLICATION=false
-      - LANGFUSE_S3_EVENT_UPLOAD_BUCKET=${MINIO_BUCKET}
-      - LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT=http://minio:9000
-      - LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID=${MINIO_ROOT_USER}
-      - LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-      - LANGFUSE_S3_EVENT_UPLOAD_REGION=us-east-1
-      - LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE=true
-    networks:
-      - bend-net
-
-  langfuse-db:
-    image: postgres:15
-    container_name: langfuse-db
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=langfuse
-      - POSTGRES_PASSWORD=langfuse
-      - POSTGRES_DB=langfuse
-    volumes:
-      - langfuse_db_data:/var/lib/postgresql/data
-    networks:
-      - bend-net
-
-  clickhouse:
-    image: clickhouse/clickhouse-server
-    container_name: clickhouse
-    user: "101:101"
-    restart: unless-stopped
-    depends_on:
-      clickhouse-keeper:
-        condition: service_healthy
-    environment:
-      - CLICKHOUSE_DB=langfuse
-      - CLICKHOUSE_USER=langfuse
-      - CLICKHOUSE_PASSWORD=langfuse
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-      - ./clickhouse/clickhouse_config.xml:/etc/clickhouse-server/config.d/zookeeper.xml
-    command: ["clickhouse-server",
-      "--config-file",
-      "/etc/clickhouse-server/config.d/zookeeper.xml"]
-    networks:
-      - bend-net
-    healthcheck:
-      test: ["CMD", "clickhouse-client", "-q", "SELECT 1 FROM system.zookeeper WHERE path = '/'"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  clickhouse-keeper:
-    image: clickhouse/clickhouse-server
-    container_name: clickhouse-keeper
-    restart: unless-stopped
-    volumes:
-      - clickhouse_keeper_data:/var/lib/clickhouse
-      - ./clickhouse/keeper_config.xml:/etc/clickhouse-keeper/keeper_config.xml
-    command: ["clickhouse-keeper",
-      "--config-file",
-      "/etc/clickhouse-keeper/keeper_config.xml"]
-    # command: ["tail", "-f", "/dev/null"]
-    networks:
-      - bend-net
-    healthcheck:
-      test: ["CMD", "clickhouse-client", "--host", "localhost", "--port", "9181", "-q", "ruok"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  minio:
-    image: minio/minio:latest
-    container_name: minio
-    restart: unless-stopped
-    ports:
-      - "${MINIO_API_PORT:-12014}:9000"
-      - "${MINIO_CONSOLE_PORT:-12015}:9001"
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
-    networks:
-      - bend-net
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-
-  create-minio-bucket:
-    image: minio/mc
-    depends_on:
-      minio:
-        condition: service_healthy
-    networks:
-      - bend-net
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      - MINIO_BUCKET=${MINIO_BUCKET}
-    entrypoint: sh
-    command: >
-      -c "
-      until mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD; do
-        echo '...waiting for minio';
-        sleep 1;
-      done;
-      if ! mc ls local | grep -q $$MINIO_BUCKET; then
-        echo 'Creating bucket: $$MINIO_BUCKET';
-        mc mb local/$$MINIO_BUCKET;
-      else
-        echo 'Bucket $$MINIO_BUCKET already exists.';
-      fi
-      "
-
   nemoguardrails:
     build:
       context: .
@@ -335,8 +195,4 @@ services:
 volumes:
   qdrant_data:
   openwebui_data:
-  langfuse_db_data:
-  minio_data:
-  clickhouse_data:
-  clickhouse_keeper_data:
   whisper_data:
