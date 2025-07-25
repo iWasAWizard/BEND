@@ -128,7 +128,6 @@ services:
       - bend-net
 
   koboldcpp:
-    profiles: ["koboldcpp"]
     build:
       context: .
       dockerfile: Dockerfile.build-services
@@ -164,7 +163,6 @@ services:
       - bend-net
 
   vllm:
-    profiles: ["vllm"]
     image: openeuler/vllm-cpu:latest
     container_name: vllm
     restart: unless-stopped
@@ -177,6 +175,8 @@ services:
     command: >
       --model ${MODEL_NAME}
       --served-model-name aegis-agent-model
+      --enforce-eager
+      --device cpu
       --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
     networks:
       - bend-net

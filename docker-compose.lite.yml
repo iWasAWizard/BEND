@@ -89,6 +89,8 @@ services:
     command: >
       --model ${MODEL_NAME}
       --served-model-name aegis-agent-model
+      --enforce-eager
+      --device cpu
       --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
     networks:
       - bend-net
