@@ -1,0 +1,8 @@
+# BEND/Dockerfile.ollama
+# Start from the official Ollama image
+FROM ollama/ollama
+
+# Install curl, which is needed by our entrypoint script to perform a healthcheck
+# on the server before trying to pull a model.
+RUN apt-get update && apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*

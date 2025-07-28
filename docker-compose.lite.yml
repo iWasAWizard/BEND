@@ -37,15 +37,22 @@ services:
     networks:
       - bend-net
 
+
   ollama:
     profiles: ["ollama"]
-    image: ollama/ollama
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
     container_name: ollama
     restart: unless-stopped
     ports:
       - "${OLLAMA_PORT:-12009}:11434"
     volumes:
+      - ./ollama_entrypoint.sh:/ollama_entrypoint.sh
       - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_PULL_MODEL=${OLLAMA_PULL_MODEL}
+    entrypoint: /ollama_entrypoint.sh
     networks:
       - bend-net
 

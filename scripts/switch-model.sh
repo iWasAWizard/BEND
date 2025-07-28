@@ -4,9 +4,8 @@
 # This script's only job is to write the correct environment variables to the .env file
 # based on a model key from models.yaml.
 #
-# It should be run AFTER you have downloaded the necessary models using:
+# It should be run AFTER you have downloaded the necessary models for vLLM using:
 # - ./scripts/download-hf-model.sh
-# - ./scripts/download-gguf-model.sh
 
 set -e
 BEND_ROOT=$(git rev-parse --show-toplevel)
@@ -45,19 +44,19 @@ if [ -n "$MODEL_ENTRY" ]; then
   echo "✅ Found key '$MODEL_KEY' in $MODELS_FILE. Configuring from manifest."
 
   HF_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.name')
-  KOBOLDCPP_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.koboldcpp_model_name // ""')
   CONTEXT_SIZE=$(echo "$MODEL_ENTRY" | yq -r '.default_max_context_length // 8192')
+  OLLAMA_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.ollama_model_name // "llama3:instruct"') # Fallback to a sensible default
 
   update_env "MODEL_NAME" "$HF_MODEL_NAME"
-  update_env "KOBOLDCPP_MODEL_NAME" "$KOBOLDCPP_MODEL_NAME"
   update_env "MODEL_CONTEXT_SIZE" "$CONTEXT_SIZE"
-  update_env "OLLM_API_BASE_URL" "http://vllm:8000/v1"
+  update_env "OLLAMA_PULL_MODEL" "$OLLAMA_MODEL_NAME"
+  update_env "OLLM_API_BASE_URL" "http://vllm:8000/v1" # Keep vLLM as default for OpenWebUI
 
   echo "----------------------------------------"
   echo "Model configured successfully:"
-  echo "  vLLM Model:       $HF_MODEL_NAME"
-  echo "  KoboldCPP Model:  $KOBOLDCPP_MODEL_NAME"
-  echo "  Context Size:     $CONTEXT_SIZE"
+  echo "  vLLM Model:         $HF_MODEL_NAME"
+  echo "  Ollama Pull Model:  $OLLAMA_MODEL_NAME"
+  echo "  Context Size:       $CONTEXT_SIZE"
   echo "----------------------------------------"
 else
   echo "❌ Error: Key '$MODEL_KEY' not found in $MODELS_FILE."

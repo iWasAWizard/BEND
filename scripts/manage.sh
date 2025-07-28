@@ -15,7 +15,7 @@ show_help() {
   echo ""
   echo "Commands:"
   echo "  up            Start services."
-  echo "  down          Stop all services."
+  echo "  down [-v]     Stop all services. Use -v to remove volumes."
   echo "  restart       Restart services."
   echo "  logs          Tail logs."
   echo "  status        Show the status of running containers."
@@ -41,6 +41,7 @@ LITE_MODE=false
 LITE_PROFILE_ARGS=""
 SERVICE=""
 GPU_FLAG=""
+DOWN_FLAGS=""
 TEMP_ARGS=() # Use an array to handle non-flag arguments robustly
 
 while [[ $# -gt 0 ]]; do
@@ -61,6 +62,10 @@ while [[ $# -gt 0 ]]; do
         LITE_PROFILE_ARGS="--profile vllm --profile ollama"
         shift
       fi
+      ;;
+    -v)
+      DOWN_FLAGS="-v"
+      shift
       ;;
     -h|--help)
       show_help
@@ -100,10 +105,8 @@ then
     COMPOSE_CMD="$COMPOSE_CMD -f docker-compose.gpu.yml"
     echo "✅ GPU acceleration enabled."
     # Set build-time arguments for services that need them
-    export KOBOLD_GPU_ENABLED=true
     export WHISPER_GPU_ENABLED=true
 else
-    export KOBOLD_GPU_ENABLED=false
     export WHISPER_GPU_ENABLED=false
 fi
 
@@ -117,7 +120,7 @@ case "$COMMAND" in
   down)
     echo "Stopping BEND services..."
     # The 'down' command should be aware of all possible configurations to ensure it stops everything.
-    docker compose -f docker-compose.yml -f docker-compose.lite.yml down --remove-orphans $SERVICE
+    docker compose -f docker-compose.yml -f docker-compose.lite.yml down --remove-orphans $DOWN_FLAGS $SERVICE
     ;;
   restart)
     echo "Restarting BEND services..."

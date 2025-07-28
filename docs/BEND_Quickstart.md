@@ -38,26 +38,25 @@ Now, open the new `.env` file with a text editor. **If you plan to use gated mod
 HF_TOKEN="hf_YourHuggingFaceTokenHere"
 ```
 
-## Step 2: Download Your Models
+## Step 2: Download Your vLLM Model
 
-The next step is to download the models you want to use.
+Use the `download-hf-model.sh` script with the Hugging Face repository ID. This will clone the entire model repository into the `models/` directory.
+```bash
+# Download the Llama 3 model repository
+./scripts/download-hf-model.sh "meta-llama/Meta-Llama-3-8B-Instruct"
+```
 
-1.  **Download the vLLM Model:**
-    Use the `download-hf-model.sh` script with the Hugging Face repository ID.
-    ```bash
-    # Download the Llama 3 model repository
-    ./scripts/download-hf-model.sh "meta-llama/Meta-Llama-3-8B-Instruct"
-    ```
+## Step 3: Configure the Stack to Use Your Model
 
-2.  **Configure the Stack:**
-    Run the `switch-model.sh` script to configure all services to use the model you just downloaded.
-    ```bash
-    ./scripts/switch-model.sh llama3
-    ```
+Now that the files are downloaded, run the `switch-model.sh` script. This reads `models.yaml` and sets the correct model name and parameters in your `.env` file for all services.
 
-## Step 3: Start the Stack
+```bash
+./scripts/switch-model.sh llama3
+```
 
-You're now ready to launch the BEND stack.
+## Step 4: Start the Stack
+
+You're now ready to launch the BEND stack. You can start the full stack or a lightweight, essential-only version.
 
 -   **To start the FULL stack with GPU:**
     ```bash
@@ -68,7 +67,7 @@ You're now ready to launch the BEND stack.
     ./scripts/manage.sh up --lite vllm --gpu
     ```
 
-## Step 4: Pull and Run an Ollama Model
+## Step 5: Pull and Run an Ollama Model
 
 After the stack is running, you need to tell the Ollama service which model to download and run.
 
@@ -83,7 +82,7 @@ After the stack is running, you need to tell the Ollama service which model to d
     ```
     Ollama will download the model and make it available. You only need to do this once.
 
-## Step 5: Verify the Installation
+## Step 6: Verify the Installation
 
 Once the services are running, you can verify that everything started correctly.
 
@@ -97,6 +96,46 @@ Once the services are running, you can verify that everything started correctly.
 | :--- | :--- | :--- |
 | `http://localhost:12002` | OpenWebUI | A friendly chat interface to talk directly to your LLM. |
 | `http://localhost:12005` | Glances (Full Stack Only) | A system monitoring dashboard. |
+
+## Step 7: Interact with the API
+
+Your BEND stack is now running and ready to receive API calls. Here are a couple of examples using `curl` to show how you can interact with the key services directly.
+
+**1. Get a Chat Completion from vLLM (Primary Engine):**
+This command sends a prompt to the vLLM service using its OpenAI-compatible endpoint.
+
+```bash
+curl http://localhost:12011/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "aegis-agent-model",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "What is the capital of France?"}
+    ]
+  }'
+```
+
+**2. Ingest and Retrieve from the RAG Service:**
+First, ingest a simple text file into the RAG system.
+
+```bash
+# Create a dummy file
+echo "The secret code for Project Chimera is Crimson-Echo." > ./rag/docs/secret.txt
+
+# Ingest the file
+curl -X POST -F "file=@./rag/docs/secret.txt" http://localhost:12007/ingest
+```
+
+Now, ask a question and retrieve the information.
+
+```bash
+curl http://localhost:12007/retrieve \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is the code for Project Chimera?"
+  }'
+```
 
 ## Next Steps
 
