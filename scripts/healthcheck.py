@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # BEND/scripts/healthcheck.py
 """
-A simple healthcheck script for the BEND stack.
-Curls the primary endpoints of each service to verify they are responsive.
+This script is intended to be run from the host machine, not inside a container.
+It checks the health of all key BEND services by making HTTP requests to their health endpoints.
+If any service is unresponsive or returns an error status, it will print a failure message
+and exit with a non-zero status code.
 """
 
 import os
@@ -22,6 +24,7 @@ class Colors:
 # URLs are configured to be called from the host machine, matching docker-compose ports.
 SERVICES = {
     "vLLM": os.getenv("VLLM_URL", "http://localhost:12011/health"),
+    "Ollama": os.getenv("OLLAMA_URL", "http://localhost:12009/"),
     "Guardrails": os.getenv("GUARDRAILS_URL", "http://localhost:12012/health"),
     "Whisper": os.getenv("WHISPER_URL", "http://localhost:12003/health"),
     "Piper": os.getenv("PIPER_URL", "http://localhost:12004/"),

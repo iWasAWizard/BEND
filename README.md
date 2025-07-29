@@ -1,5 +1,5 @@
 # BEND
-**Backend Enhanced Neural Dispatch**
+**BackEND**
 
 [![Docker](https://img.shields.io/badge/containerized-Docker-blue)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -15,11 +15,11 @@ Think of it as a ready-to-run "AI power source" for your projects, letting you f
 BEND isn't a single application; it's a curated collection of services that work together seamlessly. Here’s a quick look at the key components and the role each one plays:
 
 -   **vLLM (The Engine):** This is the high-performance server that runs your main language models. It's incredibly fast and efficient, especially on a GPU, and serves models through an OpenAI-compatible API.
+-   **Ollama (The Specialist):** An easy-to-use and highly performant model server that excels at running GGUF-quantized models, especially on Apple Silicon. It's the new default for CPU-based and non-NVIDIA execution.
 -   **Qdrant (The Library):** A professional-grade vector database. This is the heart of the RAG system, where the knowledge from your documents is stored, indexed, and made searchable.
 -   **Redis (The Notebook):** A fast, in-memory database that provides a simple key-value store. This is used by agents to save and recall specific facts, giving them a persistent long-term memory.
 -   **NeMo Guardrails (The Safety Inspector):** A security layer that can inspect an agent's proposed actions and block them if they violate pre-defined safety rules, preventing dangerous or unintended behavior.
 -   **Whisper & Piper (The Ears & Voice):** These services handle speech-to-text and text-to-speech, allowing your applications to listen and speak through a simple, unified API.
--   **KoboldCPP (The Specialist):** While vLLM is the primary engine, KoboldCPP is an excellent fallback that specializes in running GGUF-quantized models, giving you access to a huge ecosystem of community-tuned models.
 
 ## Architecture
 
@@ -35,11 +35,12 @@ All services run in their own Docker containers and communicate over a private n
 |  +-----------+   +----------+   +----------+   +----------+  |
 |                                                             |
 |  +-----------+   +----------+   +----------+                 |
-|  | KoboldCPP |   |  Whisper |   |   Piper  |                 |
+|  |   Ollama  |   |  Whisper |   |   Piper  |                 |
 |  | (LLM API) |   |  (STT)   |   |   (TTS)  |                 |
 |  +-----------+   +----------+   +----------+                 |
 |                                                             |
-+-------------------------------------------------------------+```
++-------------------------------------------------------------+
+```
 
 ## 🚀 Quickstart
 
@@ -59,14 +60,14 @@ git clone https://github.com/your-username/BEND.git
 cd BEND
 ```
 
-Next, you need to choose and configure a language model.
+Next, you need to choose and configure a language model for vLLM.
 
 ```bash
 # See a list of pre-configured models
 ./scripts/list-models.sh
 
-# Download the GGUF files for a model (e.g., llama3)
-./scripts/download-gguf-model.sh llama3
+# Download the full repository for a model (e.g., llama3)
+./scripts/download-hf-model.sh "meta-llama/Meta-Llama-3-8B-Instruct"
 
 # Configure the stack to use the chosen model
 ./scripts/switch-model.sh llama3
@@ -84,8 +85,6 @@ You're now ready to launch all the BEND services.
     ```bash
     ./scripts/manage.sh up --gpu
     ```
-
-The first time you run this, it will build the necessary Docker images and may take several minutes.
 
 ### 4. Verify the Installation
 
@@ -119,7 +118,7 @@ All stack management is handled by the `manage.sh` script:
 | 12006  | Qdrant (RAG)     |
 | 12007  | Retriever API    |
 | 12008  | Voice Proxy      |
-| 12009  | KoboldCPP        |
+| 12009  | Ollama           |
 | 12010  | Redis            |
 | 12011  | vLLM             |
 | 12012  | NeMo Guardrails  |
