@@ -12,7 +12,7 @@ services:
     ports:
       - "${OPENWEBUI_PORT:-12002}:3000"
     environment:
-      - OLLM_API_BASE_URL=http://ollama:11434/api
+      - OLLM_API_BASE_URL=http://ollama:11434
       - WEBUI_URL=http://localhost:12002
       - PORT=3000
       - ENABLE_PERSISTENT_CONFIG=true
@@ -139,16 +139,11 @@ services:
     ports:
       - "${OLLAMA_PORT:-12009}:11434"
     volumes:
-      - ./ollama_entrypoint.sh:/ollama_entrypoint.sh
+      - ./scripts/entrypoint-ollama.sh:/entrypoint-ollama.sh
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_PULL_MODEL=${OLLAMA_PULL_MODEL}
-    entrypoint: /ollama_entrypoint.sh
-    command: >
-      --model ${MODEL_NAME}
-      --context-size ${MODEL_CONTEXT_SIZE:-16384}
-      --threads 4
-      --host 0.0.0.0
+    entrypoint: /entrypoint-ollama.sh
     networks:
       - bend-net
 

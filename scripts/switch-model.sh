@@ -1,23 +1,25 @@
 #!/bin/bash
-# switch-model.sh - A script to configure BEND for a specific pre-defined model.
+# switch-model.sh - A smart script to configure BEND for a specific model.
 
-# This script's only job is to write the correct environment variables to the .env file
-# based on a model key from models.yaml.
+# It can be used in two ways:
+# 1. By KEY: ./scripts/switch-model.sh llama3
+#    - Looks up 'llama3' in models.yaml.
+#    - Configures vLLM and Ollama with values from the manifest.
 #
-# It should be run AFTER you have downloaded the necessary models for vLLM using:
-# - ./scripts/download-hf-model.sh
+# 2. By Hugging Face REPO_ID: ./scripts/switch-model.sh "mistralai/Mistral-7B-Instruct-v0.2"
+#    - Treats the argument as a repo ID for vLLM.
+#    - Disables Ollama for this run.
 
 set -e
 BEND_ROOT=$(git rev-parse --show-toplevel)
 cd "$BEND_ROOT"
 
-MODEL_KEY=$1
+MODEL_KEY_OR_REPO_ID=$1
 MODELS_FILE="models.yaml"
 ENV_FILE=".env"
 
-if [ -z "$MODEL_KEY" ]; then
-  echo "Usage: $0 <model_key_from_models_yaml>"
-  echo "Example: $0 llama3"
+if [ -z "$MODEL_KEY_OR_REPO_ID" ]; then
+  echo "Usage: $0 <model_key_from_models_yaml | hugging_face_repo_id>"
   exit 1
 fi
 
@@ -34,32 +36,42 @@ update_env() {
   rm -f "${ENV_FILE}.bak"
 }
 
-# Ensure .env file exists
 touch "$ENV_FILE"
-
-# Check if the input is a known key in models.yaml
-MODEL_ENTRY=$(yq ".models[] | select(.key == \"$MODEL_KEY\")" "$MODELS_FILE")
+MODEL_ENTRY=$(yq ".models[] | select(.key == \"$MODEL_KEY_OR_REPO_ID\")" "$MODELS_FILE")
 
 if [ -n "$MODEL_ENTRY" ]; then
-  echo "✅ Found key '$MODEL_KEY' in $MODELS_FILE. Configuring from manifest."
+  echo "✅ Found key '$MODEL_KEY_OR_REPO_ID' in $MODELS_FILE. Configuring from manifest."
 
   HF_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.name')
+  OLLAMA_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.ollama_model_name // ""')
   CONTEXT_SIZE=$(echo "$MODEL_ENTRY" | yq -r '.default_max_context_length // 8192')
-  OLLAMA_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.ollama_model_name // "llama3:instruct"') # Fallback to a sensible default
 
   update_env "MODEL_NAME" "$HF_MODEL_NAME"
-  update_env "MODEL_CONTEXT_SIZE" "$CONTEXT_SIZE"
   update_env "OLLAMA_PULL_MODEL" "$OLLAMA_MODEL_NAME"
-  update_env "OLLM_API_BASE_URL" "http://vllm:8000/v1" # Keep vLLM as default for OpenWebUI
+  update_env "MODEL_CONTEXT_SIZE" "$CONTEXT_SIZE"
+  update_env "OLLM_API_BASE_URL" "http://vllm:8000,http://ollama:11434"
 
   echo "----------------------------------------"
   echo "Model configured successfully:"
-  echo "  vLLM Model:         $HF_MODEL_NAME"
-  echo "  Ollama Pull Model:  $OLLAMA_MODEL_NAME"
-  echo "  Context Size:       $CONTEXT_SIZE"
+  echo "  vLLM Model:       $HF_MODEL_NAME"
+  echo "  Ollama Model:     $OLLAMA_MODEL_NAME"
+  echo "  Context Size:     $CONTEXT_SIZE"
   echo "----------------------------------------"
 else
-  echo "❌ Error: Key '$MODEL_KEY' not found in $MODELS_FILE."
-  echo "Please use a valid key from the manifest or add a new entry."
-  exit 1
+  echo "⚠️ Key '$MODEL_KEY_OR_REPO_ID' not found. Treating as a dynamic Hugging Face repo ID for vLLM."
+
+  HF_MODEL_NAME="$MODEL_KEY_OR_REPO_ID"
+  OLLAMA_MODEL_NAME=""
+  CONTEXT_SIZE="8192"
+
+  update_env "MODEL_NAME" "$HF_MODEL_NAME"
+  update_env "OLLAMA_PULL_MODEL" "$OLLAMA_MODEL_NAME"
+  update_env "MODEL_CONTEXT_SIZE" "$CONTEXT_SIZE"
+  update_env "OLLM_API_BASE_URL" "http://vllm:8000,http://ollama:11434"
+
+  echo "----------------------------------------"
+  echo "Model configured for dynamic vLLM loading:"
+  echo "  vLLM Model:       $HF_MODEL_NAME"
+  echo "🔴 NOTE: Ollama is disabled for this dynamic model."
+  echo "----------------------------------------"
 fi
