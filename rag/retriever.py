@@ -21,6 +21,8 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+from shared.fastapi_utils import api_key_security
+
 # --- Logging Setup ---
 # Configure root logger for structured JSON logging
 logHandler = logging.StreamHandler(sys.stdout)
@@ -31,7 +33,6 @@ logging.getLogger("uvicorn.access").disabled = True  # Disable default access lo
 # --- End Logging Setup ---
 
 # --- Tracing Setup ---
-API_KEY = os.getenv("BEND_API_KEY")
 OTEL_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 tracer: trace.Tracer
 
@@ -47,12 +48,6 @@ else:
     # Use a No-op tracer if the endpoint isn't configured
     tracer = NoOpTracer()
 # --- End Tracing Setup ---
-
-
-async def api_key_security(x_api_key: str = Header(None)):
-    if API_KEY:  # Security is enabled
-        if x_api_key != API_KEY:
-            raise HTTPException(status_code=403, detail="Invalid API Key")
 
 
 app = FastAPI(dependencies=[Depends(api_key_security)])

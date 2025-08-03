@@ -7,6 +7,8 @@ import logging
 import sys
 from pythonjsonlogger import json
 
+from shared.fastapi_utils import api_key_security
+
 # --- Logging Setup ---
 logHandler = logging.StreamHandler(sys.stdout)
 formatter = json.JsonFormatter(fmt="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -23,7 +25,6 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 # --- Tracing Setup ---
-API_KEY = os.getenv("BEND_API_KEY")
 OTEL_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 clients = {}
 tracer: trace.Tracer
@@ -46,12 +47,6 @@ async def lifespan(app: FastAPI):
     clients["httpx"] = httpx.AsyncClient()
     yield
     await clients["httpx"].aclose()
-
-
-async def api_key_security(x_api_key: str = Header(None)):
-    if API_KEY:  # Security is enabled
-        if x_api_key != API_KEY:
-            raise HTTPException(status_code=403, detail="Invalid API Key")
 
 
 app = FastAPI(dependencies=[Depends(api_key_security)], lifespan=lifespan)

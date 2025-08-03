@@ -44,7 +44,6 @@ services:
       --host 0.0.0.0
       --port 9000
       --convert
-      --no-gpu
       --flash-attn
     volumes:
       - whisper_data:/config
@@ -98,7 +97,8 @@ services:
 
   retriever:
     build:
-      context: ./rag
+      context: .
+      dockerfile: ./rag/Dockerfile
     container_name: retriever
     restart: unless-stopped
     ports:
@@ -115,7 +115,9 @@ services:
       - bend-net
 
   voiceproxy:
-    build: ./voice-proxy
+    build:
+      context: .
+      dockerfile: ./voice-proxy/Dockerfile
     container_name: voiceproxy
     restart: unless-stopped
     ports:
@@ -143,6 +145,8 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_PULL_MODEL=${OLLAMA_PULL_MODEL}
+      - OLLAMA_HEADERS=X-API-Key,Authorization
+      - BEND_API_KEY=${BEND_API_KEY}
     entrypoint: /entrypoint-ollama.sh
     networks:
       - bend-net
@@ -156,31 +160,13 @@ services:
     networks:
       - bend-net
 
-  vllm:
-    image: vllm/vllm-openai:latest
-    container_name: vllm
-    restart: unless-stopped
-    ports:
-      - "${VLLM_PORT:-12011}:8000"
-    environment:
-      - HF_TOKEN=${HF_TOKEN}
-    volumes:
-      - ./models:/root/.cache/huggingface/hub
-    command: >
-      --model ${MODEL_NAME}
-      --served-model-name aegis-agent-model
-      --enforce-eager
-      --device cpu
-      --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
-    networks:
-      - bend-net
-
   nemoguardrails:
     build:
       context: .
       dockerfile: Dockerfile.nemo
     container_name: nemoguardrails
     restart: unless-stopped
+    command: ["nemoguardrails", "server", "--config=./config", "--default-config-id", "config"]
     ports:
       - "${GUARDRAILS_PORT:-12012}:8000"
     networks:

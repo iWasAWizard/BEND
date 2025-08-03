@@ -14,15 +14,4 @@ RUN python -m pip install --no-cache-dir --break-system-packages piper-tts[http]
 
 RUN python -m piper.download_voices ${PIPER_VOICE_MODEL:-en_US-lessac-medium}
 
-# The URL for the Linux aarch64 (ARM64) binary release.
-# ENV PIPER_URL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz"
-
-# # Download and unpack the pre-compiled application.
-# RUN wget -O piper.tar.gz "$PIPER_URL" && \
-#     tar -zxvf piper.tar.gz && \
-#     rm piper.tar.gz
-
-# *** FIX: Ensure the extracted binary is executable ***
-# RUN chmod +x /app/piper/piper
-
-# The CMD in docker-compose.yml will call /app/piper/piper
+# The CMD in docker-compose.yml will call the piper http_server

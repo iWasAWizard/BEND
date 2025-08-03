@@ -22,16 +22,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base AS kobold-builder
 WORKDIR /app
 RUN git clone https://github.com/LostRuins/koboldcpp.git .
-RUN pip install --no-cache-dir --trusted-host pypi.python.org --break-system-packages -r requirements.txt
+RUN python -m pip install --no-cache-dir --trusted-host pypi.python.org --break-system-packages -r requirements.txt
 
 # This build argument is passed from the docker-compose build command.
 ARG GPU_ENABLED=false
 RUN if [ "$GPU_ENABLED" = "true" ]; then \
     echo "Building KoboldCPP with NVIDIA CUBLAS support..."; \
-    # Use LLAMA_METAL for macOS builds
-    make LLAMA_ACCELERATE=1 LLAMA_METAL=1 LLAMA_OPENBLAS=1 LLAMA_CLBLAST=1 -j$(nproc); \
     # Use LLAMA_CUBLAS for NVIDIA GPU builds
-    # make  LLAMA_CUBLAS=1 LLAMA_OPENBLAS=1 LLAMA_CLBLAST=1 -j$(nproc)
+    make LLAMA_CUBLAS=1 LLAMA_OPENBLAS=1 LLAMA_CLBLAST=1 -j$(nproc); \
+    # Use LLAMA_METAL for local macOS builds (not used in standard Docker flow)
+    # make LLAMA_ACCELERATE=1 LLAMA_METAL=1 LLAMA_OPENBLAS=1 LLAMA_CLBLAST=1 -j$(nproc); \
     else \
     echo "Building KoboldCPP for CPU (portable)..."; \
     make LLAMA_PORTABLE=1 LLAMA_ACCELERATE=1 LLAMA_OPENBLAS=1 LLAMA_CLBLAST=1 -j$(nproc); \

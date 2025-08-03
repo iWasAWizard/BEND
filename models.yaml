@@ -65,3 +65,14 @@ models:
     use_case: "Code generation and instruction following"
     url: "https://huggingface.co/TheBloke/granite-3.3-8B-instruct-GGUF/resolve/main/granite-3.3-8b-instruct.Q4_K_M.gguf"
     notes: "A strong, modern coding model from IBM."
+
+  - key: "openchat"
+    name: "openchat/openchat-3.6-8b-20240522"
+    ollama_model_name: "hf.co/bartowski/openchat-3.6-8b-20240522-GGUF:Q4_K_M"
+    filename_pattern: ["openchat-3.6-8b"]
+    formatter_hint: "chatml"
+    default_max_context_length: 32768
+    quant_example: "Q4_K_M"
+    use_case: "General-purpose assistant, strong reasoning"
+    url: "https://huggingface.co/bartowski/openchat-3.6-8b-20240522-GGUF/blob/main/openchat-3.6-8b-20240522-Q4_K_M.gguf"
+    notes: "A powerful open-source model, great for general chat."

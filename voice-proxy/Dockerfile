@@ -1,7 +1,8 @@
 FROM python:3.13-slim
 
 WORKDIR /app
-COPY main.py .
+COPY voice-proxy/main.py ./main.py
+COPY shared ./shared
 
 RUN pip install --no-cache-dir --break-system-packages fastapi uvicorn httpx python-json-logger \
     opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp opentelemetry-instrumentation-fastapi \

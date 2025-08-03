@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # BEND/scripts/healthcheck.py
 """
 This script is intended to be run from the host machine, not inside a container.

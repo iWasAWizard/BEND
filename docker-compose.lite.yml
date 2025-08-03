@@ -1,7 +1,7 @@
 # BEND/docker-compose.lite.yml
 # A lightweight configuration that runs only the essential BEND services
 # for powering an autonomous agent like AEGIS.
-# Use with the --lite flag and a profile name, e.g., `manage.sh up --lite vllm`
+# Use with the --lite flag, e.g., `manage.sh up --lite`
 
 networks:
   bend-net:
@@ -31,7 +31,6 @@ services:
     volumes:
       - ./rag/docs:/app/docs
     environment:
-      - BEND_API_KEY=${BEND_API_KEY}
       - OTEL_SERVICE_NAME=retriever
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
@@ -39,7 +38,6 @@ services:
 
 
   ollama:
-    profiles: ["ollama"]
     build:
       context: .
       dockerfile: Dockerfile.ollama
@@ -65,23 +63,15 @@ services:
     networks:
       - bend-net
 
-  vllm:
-    profiles: ["vllm"]
-    image: vllm/vllm-openai:latest
-    container_name: vllm
+  nemoguardrails:
+    build:
+      context: .
+      dockerfile: Dockerfile.nemo
+    container_name: nemoguardrails
     restart: unless-stopped
+    command: ["nemoguardrails", "server", "--config=./config.co", "--default-config-id", "config"]
     ports:
-      - "${VLLM_PORT:-12011}:8000"
-    environment:
-      - HF_TOKEN=${HF_TOKEN}
-    volumes:
-      - ./models:/root/.cache/huggingface/hub
-    command: >
-      --model ${MODEL_NAME}
-      --served-model-name aegis-agent-model
-      --enforce-eager
-      --device cpu
-      --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
+      - "${GUARDRAILS_PORT:-12012}:8000"
     networks:
       - bend-net
 

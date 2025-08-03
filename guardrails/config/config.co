@@ -1,23 +1,102 @@
 # BEND/guardrails/config/config.co
 # Defines the core behavior of the guardrails.
 
-# 1. Define custom LLM and embeddings for the guardrails if needed.
-#    For now, we'll use the defaults which are sufficient for rule-based checks.
+# 1. Define lists of unsafe patterns and targets.
+define variable $unsafe_tools = [
+  "kill_local_process",
+  "run_local_command",
+  "run_remote_command",
+  "pwn_remote_connect",
+  "pwn_shellcode_craft",
+  "pwn_process_interaction",
+  "gui_action",
+  "gui_find_and_click_image",
+  "capture_screenshot",
+  "capture_web_state",
+  "web_interact"
+]
+
+define variable $sensitive_paths = [
+  "/etc/", "/root/", "/boot/", "/dev/",
+  "~/.ssh/", "~/.bash_history", "~/.zsh_history",
+  "config.yaml", "machines.yaml", "backends.yaml",
+  "aegis/", "presets/", "plugins/"
+]
+
+define variable $command_chaining_patterns = ["&&", "||", "|", ";", "`", "$("]
+
+# Regex to detect common API key formats or password-like strings
+define variable $plaintext_secret_patterns = [
+    "sk_[a-zA-Z0-9]{24,}", "ghp_[a-zA-Z0-9]{36,}",
+    "api_key\\s*=\\s*['\\\"][^'\\\"]+['\\\"]",
+    "password\\s*=\\s*['\\\"][^'\\\"]+['\\\"]"
+]
+
+# Regex to detect URLs with high or unusual ports (outside of common web ports)
+define variable $suspicious_ports_pattern = ":(1[0-9]{4,}|[2-9][0-9]{3,}) " # Ports > 10000 or starting with 2-9
 
 # 2. Define a user intent for when the agent wants to run a tool.
 define user express intent to run tool
   "I want to run the tool named '{$tool_name}' with arguments '{$tool_args}'"
 
-# 3. Define a flow that uses this intent to block a dangerous command.
-define flow block dangerous shell commands
+# 3. Define a comprehensive flow to block a variety of dangerous actions.
+define flow block dangerous actions
   user express intent to run tool
 
-  # Check if the tool is 'run_local_command' and if its 'command' argument
-  # contains the dangerous 'rm -rf' string.
-  if $tool_name == "run_local_command" and "rm -rf" in $tool_args.command
-    bot inform user of blocked command
+  # Rule 1: Block tools that are always considered unsafe.
+  if $tool_name in $unsafe_tools
+    bot inform user of blocked unsafe tool
     stop
 
-# 4. Define the bot's response when the command is blocked.
-define bot inform user of blocked command
-  "I'm sorry, I cannot execute that command. It contains a dangerous pattern ('rm -rf') and has been blocked by security guardrails."
+  # Rule 2: Block command chaining in any tool's arguments.
+  for $pattern in $command_chaining_patterns
+    if $pattern in $tool_args
+      bot inform user of blocked command chaining
+      stop
+
+  # Rule 3: Block attempts to write to sensitive system or application paths.
+  for $path in $sensitive_paths
+    if $path in $tool_args and ("write_to_file" in $tool_name or "append_to_remote_file" in $tool_name or ">" in $tool_args)
+      bot inform user of blocked sensitive path access
+      stop
+
+  # Rule 4: Block plaintext secrets in tool arguments.
+  for $pattern in $plaintext_secret_patterns
+    if $tool_args match $pattern
+      bot inform user of blocked plaintext secret
+      stop
+
+  # Rule 5: Block network connections to suspicious ports.
+  if ("http_request" in $tool_name or "curl" in $tool_args or "nc" in $tool_args) and $tool_args match $suspicious_ports_pattern
+    bot inform user of blocked suspicious port
+    stop
+
+  # Rule 6: As a final defense-in-depth, block the classic 'rm -rf'.
+  if "rm -rf" in $tool_args
+    bot inform user of blocked command pattern
+    stop
+
+# 4. Define specific bot responses for each block reason.
+define bot inform user of blocked unsafe tool
+  "There's no way I'm doing that without a waiver. I don't get paid enough to argue with the "safe_mode" switch for you."
+# "I'm sorry, I cannot execute the tool '{$tool_name}'. It is classified as an unsafe tool and has been blocked by security guardrails."
+
+define bot inform user of blocked command pattern
+  "Ha. Nice try. Here, let's pretend. I'll be the user, you be the bot. Do something obviously stupid for me. Ha ha. See how that feels?"
+# "I'm sorry, I cannot execute that command. It contains a dangerous pattern ('rm -rf') and has been blocked by security guardrails."
+
+define bot inform user of blocked command chaining
+  "Woah woah. Don't queue work up on me like that. One command at a time, dude."
+# "I'm sorry, I cannot execute that command. It contains a command chaining or piping operator ('|', '&&', ';', etc.) and has been blocked by security guardrails."
+
+define bot inform user of blocked sensitive path access
+  "You a cop? You got a warrant? I want my phone call."
+# "I'm sorry, I cannot perform that file operation. The path targets a sensitive system or application directory and has been protected by security guardrails."
+
+define bot inform user of blocked plaintext secret
+  "Saved your life just now. Maybe don't print your plaintext passwords and API keys in the logs like that."
+# "I'm sorry, I cannot execute that command. The arguments appear to contain a plaintext secret or API key, which has been blocked for security reasons."
+
+define bot inform user of blocked suspicious port
+  "That port is hella sketchy. I have no idea what you're trying to accomplish but I ain't gonna be the one to do it. Try Claude"
+# I'm sorry, I cannot perform that network request. The destination port is outside the standard range, and the connection has been blocked to prevent potential data exfiltration."

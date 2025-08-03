@@ -16,7 +16,7 @@ def run_agent_task(prompt: str, preset: str, backend_profile: str):
     print(f"Using Preset: '{preset}' with Backend Profile: '{backend_profile}'\n")
 
     # Check for an API key in the environment (if AEGIS requires one)
-    # Note: BEND uses BEND_API_KEY, but AEGIS itself doesn't have a top-level key.
+    # Note: BEND uses BACKEND_API_KEY, but AEGIS itself doesn't have a top-level key.
     # This header is included for completeness if you add security to AEGIS later.
     headers = {"Content-Type": "application/json"}
 

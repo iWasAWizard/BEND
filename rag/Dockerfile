@@ -2,8 +2,9 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-COPY retriever.py ./
-COPY docs ./docs
+COPY rag/retriever.py ./retriever.py
+COPY rag/docs ./docs
+COPY shared ./shared
 
 RUN pip install --no-cache-dir --break-system-packages fastapi uvicorn qdrant-client sentence-transformers pypdf \
     python-docx python-pptx python-json-logger python-multipart \
