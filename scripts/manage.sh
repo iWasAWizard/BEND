@@ -5,6 +5,22 @@ set -e
 BEND_ROOT=$(git rev-parse --show-toplevel)
 cd "$BEND_ROOT"
 
+# --- Environment Loading ---
+# Get the directory where the script is located to reliably find the .env file.
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+ENV_FILE="$SCRIPT_DIR/../.env"
+
+if [ -f "$ENV_FILE" ]; then
+  # Use 'set -o allexport' to export all variables defined in the .env file
+  # to the environment of this script and its child processes.
+  set -o allexport
+  source "$ENV_FILE"
+  set +o allexport
+else
+  # This is a non-fatal warning because the .env might not be needed for all commands.
+  echo "Warning: .env file not found at '$ENV_FILE'. Healthchecks for secured services may fail."
+fi
+
 # --- Default Configuration ---
 COMMAND=$1
 shift # The rest of the arguments are now in $@

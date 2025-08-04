@@ -30,7 +30,7 @@ services:
               count: all
               capabilities: [gpu]
 
-  vllm:
+  ollama-reasoning:
     deploy:
       resources:
         reservations:
@@ -39,7 +39,16 @@ services:
               count: all
               capabilities: [gpu]
 
-  ollama:
+  ollama-agentic:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  ollama-coding:
     deploy:
       resources:
         reservations:

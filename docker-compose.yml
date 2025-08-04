@@ -12,7 +12,8 @@ services:
     ports:
       - "${OPENWEBUI_PORT:-12002}:3000"
     environment:
-      - OLLM_API_BASE_URL=http://ollama:11434
+      # Point the UI to the main reasoning model for general chat
+      - OLLAMA_API_BASE_URL=http://ollama-reasoning:11434
       - WEBUI_URL=http://localhost:12002
       - PORT=3000
       - ENABLE_PERSISTENT_CONFIG=true
@@ -21,7 +22,7 @@ services:
     networks:
       - bend-net
     depends_on:
-      - ollama
+      - ollama-reasoning
 
   whisper:
     build:
@@ -108,7 +109,7 @@ services:
     volumes:
       - ./rag/docs:/app/docs
     environment:
-      - BEND_API_KEY=${BEND_API_KEY}
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
       - OTEL_SERVICE_NAME=retriever
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
@@ -126,27 +127,26 @@ services:
       - whisper
       - piper
     environment:
-      - BEND_API_KEY=${BEND_API_KEY}
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
       - OTEL_SERVICE_NAME=voiceproxy
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
       - bend-net
 
-  ollama:
+  # === MoE Ollama Specialist: Reasoning ===
+  ollama-reasoning:
     build:
       context: .
       dockerfile: Dockerfile.ollama
-    container_name: ollama
+    container_name: ollama-reasoning
     restart: unless-stopped
     ports:
-      - "${OLLAMA_PORT:-12009}:11434"
+      - "${OLLAMA_REASONING_PORT:-12009}:11434"
     volumes:
       - ./scripts/entrypoint-ollama.sh:/entrypoint-ollama.sh
-      - ollama_data:/root/.ollama
+      - ollama_reasoning_data:/root/.ollama
     environment:
-      - OLLAMA_PULL_MODEL=${OLLAMA_PULL_MODEL}
-      - OLLAMA_HEADERS=X-API-Key,Authorization
-      - BEND_API_KEY=${BEND_API_KEY}
+      - OLLAMA_PULL_MODEL=${OLLAMA_REASONING_PULL_MODEL}
     entrypoint: /entrypoint-ollama.sh
     networks:
       - bend-net
@@ -172,8 +172,62 @@ services:
     networks:
       - bend-net
 
+  # === MoE Ollama Specialist: Agentic/RAG ===
+  ollama-agentic:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    container_name: ollama-agentic
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_AGENTIC_PORT:-12013}:11434"
+    volumes:
+      - ./scripts/entrypoint-ollama.sh:/entrypoint-ollama.sh
+      - ollama_agentic_data:/root/.ollama
+    environment:
+      - OLLAMA_PULL_MODEL=${OLLAMA_AGENTIC_PULL_MODEL}
+    entrypoint: /entrypoint-ollama.sh
+    networks:
+      - bend-net
+
+  # === MoE Ollama Specialist: Coding/Math ===
+  ollama-coding:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    container_name: ollama-coding
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_CODING_PORT:-12014}:11434"
+    volumes:
+      - ./scripts/entrypoint-ollama.sh:/entrypoint-ollama.sh
+      - ollama_coding_data:/root/.ollama
+    environment:
+      - OLLAMA_PULL_MODEL=${OLLAMA_CODING_PULL_MODEL}
+    entrypoint: /entrypoint-ollama.sh
+    networks:
+      - bend-net
+
+  # === MoE Router Service ===
+  moe-router:
+    build:
+      context: .
+      dockerfile: ./moe-router/Dockerfile
+    container_name: moe-router
+    restart: unless-stopped
+    ports:
+      - "${MOE_ROUTER_PORT:-12016}:8000"
+    depends_on:
+      - ollama-reasoning
+      - ollama-agentic
+      - ollama-coding
+    networks:
+      - bend-net
+
 volumes:
   qdrant_data:
   openwebui_data:
   whisper_data:
-  ollama_data:
+  ollama_reasoning_data:
+  ollama_agentic_data:
+  ollama_coding_data:
