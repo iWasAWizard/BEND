@@ -5,7 +5,7 @@ Shared utility functions for BEND's FastAPI services.
 import os
 from fastapi import HTTPException, Depends, Header
 
-API_KEY = os.getenv("BEND_API_KEY")
+API_KEY = os.getenv("BACKEND_API_KEY")
 
 
 async def api_key_security(x_api_key: str = Header(None)):

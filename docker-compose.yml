@@ -12,7 +12,7 @@ services:
     ports:
       - "${OPENWEBUI_PORT:-12002}:3000"
     environment:
-      - OLLM_API_BASE_URL=http://ollama:11434
+      - OLLAMA_API_BASE_URL=http://ollama:11434
       - WEBUI_URL=http://localhost:12002
       - PORT=3000
       - ENABLE_PERSISTENT_CONFIG=true
@@ -108,7 +108,7 @@ services:
     volumes:
       - ./rag/docs:/app/docs
     environment:
-      - BEND_API_KEY=${BEND_API_KEY}
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
       - OTEL_SERVICE_NAME=retriever
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
@@ -126,7 +126,7 @@ services:
       - whisper
       - piper
     environment:
-      - BEND_API_KEY=${BEND_API_KEY}
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
       - OTEL_SERVICE_NAME=voiceproxy
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
@@ -145,8 +145,6 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_PULL_MODEL=${OLLAMA_PULL_MODEL}
-      - OLLAMA_HEADERS=X-API-Key,Authorization
-      - BEND_API_KEY=${BEND_API_KEY}
     entrypoint: /entrypoint-ollama.sh
     networks:
       - bend-net
@@ -172,8 +170,26 @@ services:
     networks:
       - bend-net
 
+  ollama-vision:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    container_name: ollama-vision
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_VISION_PORT:-12017}:11434"
+    volumes:
+      - ./scripts/entrypoint-ollama.sh:/entrypoint-ollama.sh
+      - ollama_vision_data:/root/.ollama
+    environment:
+      - OLLAMA_PULL_MODEL=${OLLAMA_VISION_PULL_MODEL}
+    entrypoint: /entrypoint-ollama.sh
+    networks:
+      - bend-net
+
 volumes:
   qdrant_data:
   openwebui_data:
   whisper_data:
   ollama_data:
+  ollama_vision_data:
