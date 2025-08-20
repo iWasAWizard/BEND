@@ -108,7 +108,7 @@ services:
     volumes:
       - ./rag/docs:/app/docs
     environment:
-      - BEND_API_KEY=${BEND_API_KEY}
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
       - OTEL_SERVICE_NAME=retriever
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
@@ -126,7 +126,7 @@ services:
       - whisper
       - piper
     environment:
-      - BEND_API_KEY=${BEND_API_KEY}
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
       - OTEL_SERVICE_NAME=voiceproxy
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
@@ -146,7 +146,8 @@ services:
     environment:
       - OLLAMA_PULL_MODEL=${OLLAMA_PULL_MODEL}
       - OLLAMA_HEADERS=X-API-Key,Authorization
-      - BEND_API_KEY=${BEND_API_KEY}
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
+      - OLLAMA_KEEP_ALIVE=-1
     entrypoint: /entrypoint-ollama.sh
     networks:
       - bend-net

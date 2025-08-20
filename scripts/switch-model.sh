@@ -44,7 +44,7 @@ if [ -n "$MODEL_ENTRY" ]; then
 
   HF_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.name')
   OLLAMA_MODEL_NAME=$(echo "$MODEL_ENTRY" | yq -r '.ollama_model_name // ""')
-  CONTEXT_SIZE=$(echo "$MODEL_ENTRY" | yq -r '.default_max_context_length // 8192')
+  CONTEXT_SIZE=$(echo "$MODEL_ENTRY" | yq -r '.context_length // 8192')
 
   update_env "MODEL_NAME" "$HF_MODEL_NAME"
   update_env "OLLAMA_PULL_MODEL" "$OLLAMA_MODEL_NAME"
