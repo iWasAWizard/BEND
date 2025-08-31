@@ -10,6 +10,7 @@ and exit with a non-zero status code.
 import os
 import requests
 import sys
+import logging
 
 
 # --- Colors for terminal output ---
@@ -40,23 +41,38 @@ def check_service(name: str, url: str) -> bool:
     :param url: The URL endpoint to check.
     :return: True if the service is healthy, False otherwise.
     """
-    print(f"Checking {Colors.YELLOW}{name:<15}{Colors.NC}...", end="", flush=True)
+    logger = logging.getLogger("bend.healthcheck")
+    logging.basicConfig()
+    logger.info("Checking %s...", f"{Colors.YELLOW}{name:<15}{Colors.NC}")
     try:
         # Increased timeout for services that might be slow to start (like vLLM)
         response = requests.get(url, timeout=20)
         if 200 <= response.status_code < 400:
-            print(
-                f"[ {Colors.GREEN}OK{Colors.NC} ] - Responded with status {Colors.GREEN}{response.status_code}{Colors.NC}"
+            logger.info(
+                "[ %sOK%s ] - Responded with status %s%s%s",
+                Colors.GREEN,
+                Colors.NC,
+                Colors.GREEN,
+                response.status_code,
+                Colors.NC,
             )
             return True
         else:
-            print(
-                f"[ {Colors.RED}FAIL{Colors.NC} ] - Responded with status {Colors.RED}{response.status_code}{Colors.NC}"
+            logger.error(
+                "[ %sFAIL%s ] - Responded with status %s%s%s",
+                Colors.RED,
+                Colors.NC,
+                Colors.RED,
+                response.status_code,
+                Colors.NC,
             )
             return False
     except requests.exceptions.RequestException as e:
-        print(
-            f"[ {Colors.RED}FAIL{Colors.NC} ] - Request failed: {e.__class__.__name__}"
+        logger.error(
+            "[ %sFAIL%s ] - Request failed: %s",
+            Colors.RED,
+            Colors.NC,
+            e.__class__.__name__,
         )
         return False
 
@@ -65,18 +81,20 @@ def main():
     """
     Main function to run all health checks and report status.
     """
-    print("--- BEND Service Health ---")
+    logger = logging.getLogger("bend.healthcheck")
+    logging.basicConfig()
+    logger.info("--- BEND Service Health ---")
     all_ok = True
     for name, url in SERVICES.items():
         if not check_service(name, url):
             all_ok = False
 
-    print("---------------------------")
+    logger.info("---------------------------")
     if all_ok:
-        print(f"{Colors.GREEN}All key BEND services are responsive.{Colors.NC}")
+        logger.info("%sAll key BEND services are responsive.%s", Colors.GREEN, Colors.NC)
         sys.exit(0)
     else:
-        print(f"{Colors.RED}One or more BEND services are not healthy.{Colors.NC}")
+        logger.error("%sOne or more BEND services are not healthy.%s", Colors.RED, Colors.NC)
         sys.exit(1)
 
 
