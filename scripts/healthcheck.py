@@ -91,10 +91,14 @@ def main():
 
     logger.info("---------------------------")
     if all_ok:
-        logger.info("%sAll key BEND services are responsive.%s", Colors.GREEN, Colors.NC)
+        logger.info(
+            "%sAll key BEND services are responsive.%s", Colors.GREEN, Colors.NC
+        )
         sys.exit(0)
     else:
-        logger.error("%sOne or more BEND services are not healthy.%s", Colors.RED, Colors.NC)
+        logger.error(
+            "%sOne or more BEND services are not healthy.%s", Colors.RED, Colors.NC
+        )
         sys.exit(1)
 
 
