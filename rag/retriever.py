@@ -257,5 +257,5 @@ def openwebui_rag(req: OpenWebUIRequest):
 
         return {"content": context_str}
     except Exception as e:
-        logging.error(f"Error during OpenWebUI RAG retrieval: {e}", exc_info=True)
+        logging.error('Error during OpenWebUI RAG retrieval: %s', e, exc_info=True)
         return {"content": ""}
