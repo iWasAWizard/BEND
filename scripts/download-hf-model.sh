@@ -24,7 +24,7 @@ mkdir -p "$MODELS_DIR"
 # Check for HF_TOKEN in the .env file and export it for the git command
 if [ -f "$ENV_FILE" ]; then
   # Source the .env file to make variables available
-  export $(grep -v '^#' "$ENV_FILE" | xargs)
+  export "$(grep -v '^#' "$ENV_FILE" | xargs)"
 fi
 
 # Convert repo ID to a valid directory path

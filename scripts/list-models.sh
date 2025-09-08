@@ -1,5 +1,5 @@
-# BEND/scripts/list-models.sh
 #!/bin/bash
+# BEND/scripts/list-models.sh
 # A utility to list available models from models.yaml.
 
 cd "$(dirname "$0")/.." || exit # Ensure we are in the BEND root directory
