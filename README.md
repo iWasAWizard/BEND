@@ -1,5 +1,4 @@
 # BEND
-**BackEND**
 
 [![Docker](https://img.shields.io/badge/containerized-Docker-blue)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -14,18 +13,18 @@ Think of it as a ready-to-run "AI power source" for your projects, letting you f
 
 BEND isn't a single application; it's a curated collection of services that work together seamlessly. Here’s a quick look at the key components and the role each one plays:
 
--   **vLLM (The Engine):** This is the high-performance server that runs your main language models. It's incredibly fast and efficient, especially on a GPU, and serves models through an OpenAI-compatible API.
--   **Ollama (The Specialist):** An easy-to-use and highly performant model server that excels at running GGUF-quantized models, especially on Apple Silicon. It's the new default for CPU-based and non-NVIDIA execution.
--   **Qdrant (The Library):** A professional-grade vector database. This is the heart of the RAG system, where the knowledge from your documents is stored, indexed, and made searchable.
--   **Redis (The Notebook):** A fast, in-memory database that provides a simple key-value store. This is used by agents to save and recall specific facts, giving them a persistent long-term memory.
--   **NeMo Guardrails (The Safety Inspector):** A security layer that can inspect an agent's proposed actions and block them if they violate pre-defined safety rules, preventing dangerous or unintended behavior.
--   **Whisper & Piper (The Ears & Voice):** These services handle speech-to-text and text-to-speech, allowing your applications to listen and speak through a simple, unified API.
+- **vLLM (The Engine):** This is the high-performance server that runs your main language models. It's incredibly fast and efficient, especially on a GPU, and serves models through an OpenAI-compatible API.
+- **Ollama (The Specialist):** An easy-to-use and highly performant model server that excels at running GGUF-quantized models, especially on Apple Silicon. It's the new default for CPU-based and non-NVIDIA execution.
+- **Qdrant (The Library):** A professional-grade vector database. This is the heart of the RAG system, where the knowledge from your documents is stored, indexed, and made searchable.
+- **Redis (The Notebook):** A fast, in-memory database that provides a simple key-value store. This is used by agents to save and recall specific facts, giving them a persistent long-term memory.
+- **NeMo Guardrails (The Safety Inspector):** A security layer that can inspect an agent's proposed actions and block them if they violate pre-defined safety rules, preventing dangerous or unintended behavior.
+- **Whisper & Piper (The Ears & Voice):** These services handle speech-to-text and text-to-speech, allowing your applications to listen and speak through a simple, unified API.
 
 ## Architecture
 
 All services run in their own Docker containers and communicate over a private network called `bend_bend-net`. This makes the entire stack self-contained and portable.
 
-```
+```text
 +-------------------------------------------------------------+
 | BEND Docker Environment (Network: bend_bend-net)            |
 |                                                             |
@@ -46,10 +45,10 @@ All services run in their own Docker containers and communicate over a private n
 
 ### 1. Prerequisites
 
--   Docker & Docker Compose
--   `git`
--   `yq` (e.g., `brew install yq` or `apt-get install yq`)
--   **(Optional) NVIDIA GPU** with the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+- Docker & Docker Compose
+- `git`
+- `yq` (e.g., `brew install yq` or `apt-get install yq`)
+- **(Optional) NVIDIA GPU** with the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
 ### 2. Setup
 
@@ -77,11 +76,14 @@ Next, you need to choose and configure a language model for vLLM.
 
 You're now ready to launch all the BEND services.
 
--   **For CPU-only:**
+- **For CPU-only:**
+
     ```bash
     ./scripts/manage.sh up
     ```
--   **For NVIDIA GPU acceleration (recommended):**
+
+- **For NVIDIA GPU acceleration (recommended):**
+
     ```bash
     ./scripts/manage.sh up --gpu
     ```
@@ -100,12 +102,12 @@ Once all services show `[ OK ]`, you can explore the web interfaces for OpenWebU
 
 All stack management is handled by the `manage.sh` script:
 
--   `./scripts/manage.sh up`: Start all services.
--   `./scripts/manage.sh down`: Stop all services.
--   `./scripts/manage.sh restart [service_name]`: Restart all services or a specific one.
--   `./scripts/manage.sh logs [service_name]`: Tail the logs for all services or a specific one (e.g., `vllm`).
--   `./scripts/manage.sh status`: Show the status of all running containers.
--   `./scripts/manage.sh rebuild`: Force a rebuild of the Docker images without using the cache.
+- `./scripts/manage.sh up`: Start all services.
+- `./scripts/manage.sh down`: Stop all services.
+- `./scripts/manage.sh restart [service_name]`: Restart all services or a specific one.
+- `./scripts/manage.sh logs [service_name]`: Tail the logs for all services or a specific one (e.g., `vllm`).
+- `./scripts/manage.sh status`: Show the status of all running containers.
+- `./scripts/manage.sh rebuild`: Force a rebuild of the Docker images without using the cache.
 
 ## 🎯 Ports Reference
 
@@ -131,7 +133,7 @@ BEND is designed to be the perfect backend for the **AEGIS** agentic framework. 
 
 BEND is designed to be:
 
--   **Modular:** Swap pieces in and out as you need.
--   **Reproducible:** Builds reliably from a clean state, every time.
--   **Self-hosted:** Runs on your own hardware, with no cloud dependencies.
--   **Expandable:** Serves as a great foundation for building your own AI-powered applications.
+- **Modular:** Swap pieces in and out as you need.
+- **Reproducible:** Builds reliably from a clean state, every time.
+- **Self-hosted:** Runs on your own hardware, with no cloud dependencies.
+- **Expandable:** Serves as a great foundation for building your own AI-powered applications.

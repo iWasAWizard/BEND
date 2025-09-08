@@ -8,20 +8,20 @@ By the end of this guide, you will have a complete, high-performance AI backend 
 
 BEND isn't a single application; it's a curated collection of powerful, open-source services that work together. Understanding what each piece does will help you get the most out of the stack:
 
--   **vLLM (The Engine):** This is the high-performance server that runs your main language models. It's incredibly fast and efficient, especially on a GPU.
--   **Ollama (The Specialist):** An easy-to-use and highly performant model server that excels at running GGUF-quantized models, especially on Apple Silicon. It's the new default for CPU-based and non-NVIDIA execution.
--   **Qdrant (The Library):** A professional-grade vector database. This is the heart of the RAG system, where the knowledge from your documents is stored and searched.
--   **Redis (The Notebook):** A fast, in-memory database that provides a simple key-value store. This is used by agents to save and recall specific facts, giving them a persistent memory.
--   **Whisper & Piper (The Ears & Voice):** These services handle speech-to-text and text-to-speech, allowing your applications to listen and speak.
+- **vLLM (The Engine):** This is the high-performance server that runs your main language models. It's incredibly fast and efficient, especially on a GPU.
+- **Ollama (The Specialist):** An easy-to-use and highly performant model server that excels at running GGUF-quantized models, especially on Apple Silicon. It's the new default for CPU-based and non-NVIDIA execution.
+- **Qdrant (The Library):** A professional-grade vector database. This is the heart of the RAG system, where the knowledge from your documents is stored and searched.
+- **Redis (The Notebook):** A fast, in-memory database that provides a simple key-value store. This is used by agents to save and recall specific facts, giving them a persistent memory.
+- **Whisper & Piper (The Ears & Voice):** These services handle speech-to-text and text-to-speech, allowing your applications to listen and speak.
 
 ## Prerequisites
 
 Before you start, you'll need to have a few things installed on your machine:
 
--   **Docker & Docker Compose:** For running all the containerized services.
--   **`git`:** For cloning the repository.
--   **`yq`:** A command-line YAML processor. You can usually install it with a package manager (e.g., `brew install yq` or `apt-get install yq`).
--   **(Optional) NVIDIA GPU:** If you want GPU acceleration, you'll need an NVIDIA graphics card with the appropriate drivers and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed.
+- **Docker & Docker Compose:** For running all the containerized services.
+- **`git`:** For cloning the repository.
+- **`yq`:** A command-line YAML processor. You can usually install it with a package manager (e.g., `brew install yq` or `apt-get install yq`).
+- **(Optional) NVIDIA GPU:** If you want GPU acceleration, you'll need an NVIDIA graphics card with the appropriate drivers and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed.
 
 ## Step 1: Get the Code & Configure Authentication
 
@@ -32,7 +32,9 @@ git clone https://github.com/your-username/BEND.git
 cd BEND
 cp .env.example .env
 ```
+
 Now, open the new `.env` file with a text editor. **If you plan to use gated models like Llama 3, you must add your Hugging Face token here.**
+
 ```dotenv
 # BEND/.env
 HF_TOKEN="hf_YourHuggingFaceTokenHere"
@@ -41,6 +43,7 @@ HF_TOKEN="hf_YourHuggingFaceTokenHere"
 ## Step 2: Download Your vLLM Model
 
 Use the `download-hf-model.sh` script with the Hugging Face repository ID. This will clone the entire model repository into the `models/` directory.
+
 ```bash
 # Download the Llama 3 model repository
 ./scripts/download-hf-model.sh "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -58,11 +61,14 @@ Now that the files are downloaded, run the `switch-model.sh` script. This reads 
 
 You're now ready to launch the BEND stack. You can start the full stack or a lightweight, essential-only version.
 
--   **To start the FULL stack with GPU:**
+- **To start the FULL stack with GPU:**
+
     ```bash
     ./scripts/manage.sh up --gpu
     ```
--   **To start a LITE stack with only vLLM (and core services) on GPU:**
+
+- **To start a LITE stack with only vLLM (and core services) on GPU:**
+
     ```bash
     ./scripts/manage.sh up --lite vllm --gpu
     ```
@@ -71,26 +77,32 @@ You're now ready to launch the BEND stack. You can start the full stack or a lig
 
 After the stack is running, you need to tell the Ollama service which model to download and run.
 
-1.  **Exec into the Ollama container:**
+1. **Exec into the Ollama container:**
+
     ```bash
     ./scripts/manage.sh exec ollama bash
     ```
-2.  **Pull the model:**
+
+2. **Pull the model:**
     Inside the container, run:
+
     ```bash
     ollama pull llama3:instruct
     ```
+
     Ollama will download the model and make it available. You only need to do this once.
 
 ## Step 6: Verify the Installation
 
 Once the services are running, you can verify that everything started correctly.
 
-1.  **Run the Healthcheck:**
+1. **Run the Healthcheck:**
+
     ```bash
     ./scripts/manage.sh healthcheck
     ```
-2.  **Explore the Web UIs:**
+
+2. **Explore the Web UIs:**
 
 | Port | Service | What it's for |
 | :--- | :--- | :--- |
@@ -140,6 +152,7 @@ curl http://localhost:12007/retrieve \
 ## Next Steps
 
 To stop the stack at any time, simply run:
+
 ```bash
 ./scripts/manage.sh down
 ```

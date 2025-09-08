@@ -10,18 +10,18 @@ services:
     container_name: openwebui
     restart: unless-stopped
     ports:
-      - "${OPENWEBUI_PORT:-12002}:3000"
+    - "${OPENWEBUI_PORT:-12002}:3000"
     environment:
-      - OLLM_API_BASE_URL=http://ollama:11434
-      - WEBUI_URL=http://localhost:12002
-      - PORT=3000
-      - ENABLE_PERSISTENT_CONFIG=true
+    - OLLM_API_BASE_URL=http://ollama:11434
+    - WEBUI_URL=http://localhost:12002
+    - PORT=3000
+    - ENABLE_PERSISTENT_CONFIG=true
     volumes:
-      - openwebui_data:/app/backend/data
+    - openwebui_data:/app/backend/data
     networks:
-      - bend-net
+    - bend-net
     depends_on:
-      - ollama
+    - ollama
 
   whisper:
     build:
@@ -29,14 +29,14 @@ services:
       dockerfile: Dockerfile.build-services
       target: whisper-builder
       args:
-        - GPU_ENABLED=${WHISPER_GPU_ENABLED:-false}
+      - GPU_ENABLED=${WHISPER_GPU_ENABLED:-false}
     container_name: whisper
     restart: unless-stopped
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=${TIMEZONE:-America/New_York}
-      - WHISPER_MODEL=${WHISPER_MODEL:-small.en}
+    - PUID=1000
+    - PGID=1000
+    - TZ=${TIMEZONE:-America/New_York}
+    - WHISPER_MODEL=${WHISPER_MODEL:-small.en}
     command: >
       /app/build/bin/whisper-server
       --model /app/models/ggml-${WHISPER_MODEL}.bin
@@ -46,11 +46,11 @@ services:
       --convert
       --flash-attn
     volumes:
-      - whisper_data:/config
+    - whisper_data:/config
     ports:
-      - "${WHISPER_PORT:-12003}:9000"
+    - "${WHISPER_PORT:-12003}:9000"
     networks:
-      - bend-net
+    - bend-net
 
   piper:
     build:
@@ -59,41 +59,41 @@ services:
     container_name: piper
     restart: unless-stopped
     environment:
-      - LD_LIBRARY_PATH=./piper
+    - LD_LIBRARY_PATH=./piper
     command: >
       python3 -m piper.http_server
       --model /app/${PIPER_VOICE:-en_US-lessac-medium}.onnx
       --port 59125
       --host 0.0.0.0
     ports:
-      - "${PIPER_PORT:-12004}:59125"
+    - "${PIPER_PORT:-12004}:59125"
     networks:
-      - bend-net
+    - bend-net
 
   glances:
     image: nicolargo/glances:latest
     container_name: glances
     restart: unless-stopped
     ports:
-      - "${GLANCES_PORT:-12005}:61208"
+    - "${GLANCES_PORT:-12005}:61208"
     pid: "host"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - GLANCES_OPT=-w
+    - GLANCES_OPT=-w
     networks:
-      - bend-net
+    - bend-net
 
   qdrant:
     image: qdrant/qdrant
     container_name: qdrant
     restart: unless-stopped
     ports:
-      - "${QDRANT_PORT:-12006}:6333"
+    - "${QDRANT_PORT:-12006}:6333"
     volumes:
-      - qdrant_data:/qdrant/storage
+    - qdrant_data:/qdrant/storage
     networks:
-      - bend-net
+    - bend-net
 
   retriever:
     build:
@@ -102,17 +102,17 @@ services:
     container_name: retriever
     restart: unless-stopped
     ports:
-      - "${RETRIEVER_PORT:-12007}:8000"
+    - "${RETRIEVER_PORT:-12007}:8000"
     depends_on:
-      - qdrant
+    - qdrant
     volumes:
-      - ./rag/docs:/app/docs
+    - ./rag/docs:/app/docs
     environment:
-      - BACKEND_API_KEY=${BACKEND_API_KEY}
-      - OTEL_SERVICE_NAME=retriever
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+    - BACKEND_API_KEY=${BACKEND_API_KEY}
+    - OTEL_SERVICE_NAME=retriever
+    - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
-      - bend-net
+    - bend-net
 
   voiceproxy:
     build:
@@ -121,16 +121,16 @@ services:
     container_name: voiceproxy
     restart: unless-stopped
     ports:
-      - "${VOICEPROXY_PORT:-12008}:8001"
+    - "${VOICEPROXY_PORT:-12008}:8001"
     depends_on:
-      - whisper
-      - piper
+    - whisper
+    - piper
     environment:
-      - BACKEND_API_KEY=${BACKEND_API_KEY}
-      - OTEL_SERVICE_NAME=voiceproxy
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+    - BACKEND_API_KEY=${BACKEND_API_KEY}
+    - OTEL_SERVICE_NAME=voiceproxy
+    - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     networks:
-      - bend-net
+    - bend-net
 
   ollama:
     build:
@@ -139,27 +139,27 @@ services:
     container_name: ollama
     restart: unless-stopped
     ports:
-      - "${OLLAMA_PORT:-12009}:11434"
+    - "${OLLAMA_PORT:-12009}:11434"
     volumes:
-      - ./scripts/entrypoint-ollama.sh:/entrypoint-ollama.sh
-      - ollama_data:/root/.ollama
+    - ./scripts/entrypoint-ollama.sh:/entrypoint-ollama.sh
+    - ollama_data:/root/.ollama
     environment:
-      - OLLAMA_PULL_MODEL=${OLLAMA_PULL_MODEL}
-      - OLLAMA_HEADERS=X-API-Key,Authorization
-      - BACKEND_API_KEY=${BACKEND_API_KEY}
-      - OLLAMA_KEEP_ALIVE=-1
+    - OLLAMA_PULL_MODEL=${OLLAMA_PULL_MODEL}
+    - OLLAMA_HEADERS=X-API-Key,Authorization
+    - BACKEND_API_KEY=${BACKEND_API_KEY}
+    - OLLAMA_KEEP_ALIVE=-1
     entrypoint: /entrypoint-ollama.sh
     networks:
-      - bend-net
+    - bend-net
 
   redis:
     image: redis/redis-stack:latest
     container_name: redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-12010}:6379"
+    - "${REDIS_PORT:-12010}:6379"
     networks:
-      - bend-net
+    - bend-net
 
   nemoguardrails:
     build:
@@ -169,9 +169,9 @@ services:
     restart: unless-stopped
     command: ["nemoguardrails", "server", "--config=./config", "--default-config-id", "config"]
     ports:
-      - "${GUARDRAILS_PORT:-12012}:8000"
+    - "${GUARDRAILS_PORT:-12012}:8000"
     networks:
-      - bend-net
+    - bend-net
 
 volumes:
   qdrant_data:

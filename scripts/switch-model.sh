@@ -3,12 +3,12 @@
 
 # It can be used in two ways:
 # 1. By KEY: ./scripts/switch-model.sh llama3
-#    - Looks up 'llama3' in models.yaml.
-#    - Configures vLLM and Ollama with values from the manifest.
+#- Looks up 'llama3' in models.yaml.
+#- Configures vLLM and Ollama with values from the manifest.
 #
 # 2. By Hugging Face REPO_ID: ./scripts/switch-model.sh "mistralai/Mistral-7B-Instruct-v0.2"
-#    - Treats the argument as a repo ID for vLLM.
-#    - Disables Ollama for this run.
+#- Treats the argument as a repo ID for vLLM.
+#- Disables Ollama for this run.
 
 set -e
 BEND_ROOT=$(git rev-parse --show-toplevel)

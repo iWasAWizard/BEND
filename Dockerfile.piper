@@ -1,7 +1,7 @@
 # BEND/Dockerfile.piper
 # This Dockerfile downloads and unpacks the pre-compiled piper binary.
 
-FROM python:3.13-slim
+FROM python:3.12-slim
 
 # Install wget and ca-certificates for downloading.
 RUN apt-get update && apt-get install -y --no-install-recommends \

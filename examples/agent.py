@@ -69,13 +69,13 @@ def run_agent_task(prompt: str, preset: str, backend_profile: str):
     else:
         for i, step in enumerate(history, 1):
             logger.info("  Step %d:", i)
-            logger.info("    - Thought: %s", step.get("thought"))
+            logger.info("- Thought: %s", step.get("thought"))
             logger.info(
-                "    - Action: %s(%s)",
+                "- Action: %s(%s)",
                 step.get("tool_name"),
                 json.dumps(step.get("tool_args")),
             )
-            logger.info("    - Observation: %s", step.get("tool_output"))
+            logger.info("- Observation: %s", step.get("tool_output"))
 
     logger.info("%s", "=" * 60)
     logger.info("%s", " AEGIS Agent Task Complete ".center(60, "="))

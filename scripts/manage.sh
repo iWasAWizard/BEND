@@ -46,11 +46,11 @@ TEMP_ARGS=() # Use an array to handle non-flag arguments robustly
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --gpu)
+--gpu)
       GPU_FLAG="--gpu"
       shift
       ;;
-    --lite)
+--lite)
       LITE_MODE=true
       # Check if the next argument is a valid profile, but don't require it.
       if [[ -n "$2" && ("$2" == "vllm" || "$2" == "ollama") ]]; then
@@ -63,11 +63,11 @@ while [[ $# -gt 0 ]]; do
         shift
       fi
       ;;
-    -v)
+-v)
       DOWN_FLAGS="-v"
       shift
       ;;
-    -h|--help)
+-h|--help)
       show_help
       exit 0
       ;;
